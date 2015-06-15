@@ -1,0 +1,117 @@
+/*
+ * Open source implementation of the ML3 classifier.
+ *
+ * If you find this software useful, please cite:
+ *
+ * "Multiclass Latent Locally Linear Support Vector Machines"
+ * Marco Fornoni, Barbara Caputo and Francesco Orabona
+ * JMLR Workshop and Conference Proceedings Volume 29 (ACML 2013 Proceedings)
+ *
+ * Copyright (c) 2013 Idiap Research Institute, http://www.idiap.ch/
+ * Written by Marco Fornoni <marco.fornoni@alumni.epfl.ch>
+ *
+ * This file is part of the ML3 Software.
+ *
+ * ML3 is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3 as
+ * published by the Free Software Foundation.
+ *
+ * ML3 is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with ML3. If not, see <http://www.gnu.org/licenses/>.
+ *
+ * Clustering.tc
+ *
+ *  Created on: Feb 24, 2014
+ *      Author: Marco Fornoni
+ */
+
+using namespace Eigen;
+
+
+template<typename T>
+void Clustering<T>::trainKMeans(const MatrixXT &X, const uint m, const uint maxIter, const uint verbose, MatrixXT& M){
+	/*
+	 * Trains a k-means model using X, m cluster centers, for a maximum of maxIter epochs, 
+	 * storing the cluster centers in M.
+	 * If verbose>0 it also produce some textual output regarding the computation.
+	 */
+
+	uint it;
+	T eps, obj, obj_old;
+	typename VectorXT::Index ii;
+	ArrayXT nsClust, rand_id;
+	MatrixXT M_OLD;
+	VectorXT Xt, f, oldSqNorms;
+	const uint n= X.cols();
+	const uint d= X.rows();
+
+	//INITIALIZES M WITH RANDOM SAMPLES
+	rand_id=ArrayXT::LinSpaced(n,0,n-1);
+	// RESEEDS THE NUMBER GENERATOR
+	std::srand(0);
+	std::random_shuffle(rand_id.data(),rand_id.data()+n);
+	M=MatrixXT::Zero(m,d);
+	for(uint s=0;s<m;s++){
+		it=rand_id(s);
+		M.row(s)=X.col(it).transpose();
+	}
+
+	//SETS THE DESIRED PRECISION IN THE CONVERGENCE 
+	eps=1e-6;
+	
+	//SETS TO ZERO THE VALUE OF THE OBJECTIVE FUNCTION
+	obj=0;
+
+	//MAIN K-MEANS LOOP
+	for(uint iter=0; iter<maxIter; iter++){
+		
+		//SAVES THE PREVIOUS SOLUTION IN ORDER TO BE ABLE TO COMPUTE THE DISTANCES FOR EACH SAMPLE
+		M_OLD=M;
+		M=MatrixXT::Zero(m,d);
+		nsClust=ArrayXT::Zero(m); // VARIABLE TO STORE THE NUMBER OF SAMPLES THAT ARE ASSIGNED TO EACH CLUSTER
+
+		//PRE-COMPUTES THE VECTOR CONTAINING THE SQUARED NORMS OF THE OLD CLUSTER CENTERS
+		oldSqNorms=M_OLD.array().square().rowwise().sum().matrix();
+
+		//STORES THE VALUE OF THE OBJECTIVE FUNCTION AND RESETS IT TO ZERO
+		obj_old=obj;
+		obj=0;
+
+		//LOOP OVER THE SAMPLES
+		for(uint s=0;s<n;s++){
+
+			//SELECTS A TRAINING SAMPLE
+			Xt=X.col(s);
+
+			// COMPUTES THE INDEX OF THE CLOSEST VOCABULARY CENTER TO THE CURRENT SAMPLE
+			// USING THE OLD MATRIX OF CENTERS AND THE PRECOMPUTED NORMS OF M
+			// IT IGNORES THE NORM OF Xt AS IT IS IRRELEVANT TO COMPUTE THE ASSIGNEMENTS
+			f=oldSqNorms-2*M_OLD*Xt;
+			obj+=f.minCoeff(&ii);
+
+			//ADDS THE SAMPLE s TO THE ii ROW OF THE MATRIX OF CENTERS
+			M.block(ii,0,1,d).noalias() += Xt.transpose();
+
+			//INCREMENTS THE NUMBER OF SAMPLES ASSIGNED TO THE ii CLUSTER
+			nsClust(ii)+=1;
+		}
+		obj=obj/n;
+
+		//NORMALIZES EACH CLUSTER CENTER, DIVIDING BY THE NUMBER OF SAMPLES ASSIGNED TO THAT CENTER
+		M.noalias() = (M.array()/nsClust.max(FLT_EPSILON).replicate(1,d)).matrix();
+
+		//IF NECESSARY OUTPUTS SOME LOG INFORMATION
+		if (verbose>0)
+			std::cout<<"#kmeans iter "<<iter<<"/"<<(maxIter-1)<<", obj:"<<obj<<std::endl;
+
+		//IF THE REDUCTION IN THE VALUE OF THE OBJECTIVE FUNCTION IS LOWER THAN 
+		//A CERTAIN DESIRED PRECISION eps, IT TERMINATES THE ALGORITHM
+		if(fabs(obj_old-obj)<eps)
+			break;
+	}
+}

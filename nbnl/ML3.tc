@@ -1,0 +1,583 @@
+/*
+ * Open source implementation of the ML3 classifier.
+ *
+ * If you find this software useful, please cite:
+ *
+ * "Multiclass Latent Locally Linear Support Vector Machines"
+ * Marco Fornoni, Barbara Caputo and Francesco Orabona
+ * JMLR Workshop and Conference Proceedings Volume 29 (ACML 2013 Proceedings)
+ *
+ * Copyright (c) 2013 Idiap Research Institute, http://www.idiap.ch/
+ * Written by Marco Fornoni <marco.fornoni@alumni.epfl.ch>
+ *
+ * This file is part of the ML3 Software.
+ *
+ * ML3 is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3 as
+ * published by the Free Software Foundation.
+ *
+ * ML3 is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with ML3. If not, see <http://www.gnu.org/licenses/>.
+ *
+ * ML3.tc
+ *
+ *  Created on: Apr 29, 2013
+ *      Author: Marco Fornoni
+ */
+
+using namespace Eigen;
+
+template<typename T>
+void ML3<T>::computeOptimalBeta(VectorXT &f, VectorXT &newLocalBeta, const T p, const T q, const uint m, const T tau){
+	T n2, nq;
+	ArrayXT v, c;
+	f=f.array().max(ArrayXT::Zero(m)); //element-wise max between f and zero
+	c=f.array();  //converts Vector to Array
+
+	if (p==1){
+		typename VectorXT::Index ii;
+		newLocalBeta=VectorXT::Zero(m);
+		if (f.cwiseEqual(0).sum()!=m){
+			f.maxCoeff(&ii);
+			newLocalBeta(ii)=tau;
+		}
+	}
+	else if(p==2){
+		newLocalBeta=f;
+		n2=newLocalBeta.squaredNorm();
+		if (n2!=0)
+			newLocalBeta=newLocalBeta*(tau/sqrt(n2));
+	}
+	else{
+		// CLOSED FORM SOLUTION FOR ANY p
+		nq=pow(c.pow(q).sum(),1/q); //computes q-norm of c
+		// COMPUTES THE FINAL SOLUTION
+		if (nq > 0)
+			newLocalBeta=(c/(nq)).pow(q-1);
+		else
+			newLocalBeta=c;
+	}
+}
+
+template<typename T>
+void  ML3<T>::simplexProj(VectorXT &x, VectorXT &v, T z, T p, bool exact){
+	/*
+	 * Projects the vector v into the positive lp-simplex (p={1,2}) of norm-p<=z and stores it in x
+	 * If "exact" is true it enforces the condition norm(x,p)=z.
+	 * For p==1 it implements algorithm in Fig. 1 of  J. Duchi et al. , "Efficient projections onto the l 1-ball for learning in high dimensions.", ICML, 2008.
+	 * For p==2 it implements the simple l2-projection
+	 */
+
+	T nrm;
+
+	if (p==1){
+		if (exact || v.array().abs().sum()>z){
+			bool ok;
+			T rho_v, theta;
+			uint d = v.rows();
+			Matrix<bool,Dynamic,1> wg;
+			VectorXT u=v;
+			std::sort(u.data(),u.data()+u.size(),std::greater<T>());
+			VectorXT w= VectorXT::Zero(d);
+			//			VectorXT::Index rho;
+			uint rho;
+			for (uint i=0; i<d; i++){
+				u(i);
+				u.head(i+1);
+				T tu = u.head(i+1).sum();
+				T tuz =u.head(i+1).sum() - z;
+				T tuzd =(u.head(i+1).sum() - z)/(i+1);
+				T utuzd = u(i) - (u.head(i+1).sum() - z)/(i+1);
+				w(i)= u(i) - (u.head(i+1).sum() - z)/(i+1) ;
+			}
+			wg=(w.array() > 0);
+
+			ok = true;
+			rho = d;
+			while (ok && (rho >0)){
+				rho--;
+				if (wg(rho)){
+					ok=false;
+				}
+			}
+			rho=rho+1;
+			if (~ok){
+				theta=(u.head(rho).sum() - z)/(rho);
+				x=v-VectorXT::Ones(d)*theta;
+				x=x.cwiseMax(0);
+			}else{
+				x=VectorXT::Zero(d);
+			}
+		}else{
+			x=v.cwiseMax(0);
+		}
+	}
+	else if(p==2){
+		x=v.cwiseMax(0);
+		nrm = x.norm();
+		if (exact || nrm>z){
+			x=x/nrm*z;
+		}
+	}else{
+		perror ("Value of p non supported");
+	}
+}
+
+
+
+// trains the ML3 model using X and y
+template<typename T>
+void ML3<T>::trainML3(Model<T>& model, const MatrixXT& X, const ArrayXi& y){
+	MatrixXT fakeXte;
+	ArrayXi fakeyte;
+	trainML3(model, X, y,fakeXte,fakeyte, false);
+}
+
+
+template<typename T>
+void ML3<T>::trainML3(Model<T>& model, const MatrixXT& X, const ArrayXi& y,const MatrixXT& Xte,const ArrayXi& yte, bool testAllEpochs){
+	/* 
+	 * Trains the ML3 model using X and y, and optionally tests it on Xte and yte
+	 */
+	bool init, lastIteration, need2Tst, doAvg;
+	uint it, yt, updates, projections, cc;
+	T reg, reg_c, eta, margin_true, margin_wrong, sampLoss, nw, proj_c, accuracyTe;
+	ArrayXT nW, rand_id, scores, CListMax, CListFix;
+	ArrayXi kmAssign;
+	VectorXT Xt, f, f_old, localBetaYt, localBetaYwrong;
+	MatrixXT W_INIT;
+	std::vector<MatrixXT> W_OLD;
+
+	typename VectorXT::Index y_wrong, ii;
+
+	const uint &initStep=model.initStep;
+	const uint &m=model.m;
+	const uint &maxKMIter=model.maxKMIter;
+	const uint &maxCCCPIter=model.maxCCCPIter;
+	const uint &C=model.nCla;
+	const uint &verbose=model.verbose;
+
+	const T &p=model.p;
+	const T &tau=model.tau;
+	const T &lambda=model.lambda;
+
+	const bool &averaging=model.averaging;
+	const bool &returnLocalBeta=model.returnLocalBeta;
+
+	const uint maxIter=initStep + maxCCCPIter;
+	const uint n= X.cols();
+	const uint d= X.rows();
+
+	std::vector<MatrixXT> &W=model.W;
+	std::vector<MatrixXT>  &W2=model.W2;
+	MatrixXT &localBetaClass=model.localBetaClass;
+
+	VectorXT &avgLoss=model.avgLoss;
+	VectorXT &ael=model.ael;
+	VectorXT &loss=model.loss;
+	VectorXT &obj=model.obj;
+	VectorXT &teAcc=model.teAcc;
+
+	uint &s0=model.s;
+	uint &iter=model.iter;
+
+	model.nSamp=n;
+
+	const ArrayXT zeroR=ArrayXT::Zero(m);
+	const ArrayXT zeroC=ArrayXT::Zero(C);
+
+	nW=zeroC;
+	scores=zeroC;
+	localBetaYt=VectorXT::Zero(m);
+	localBetaYwrong=VectorXT::Zero(m);
+	CListMax=VectorXT::Zero(C-1);
+
+	// PRINTS OUT THE MODEL
+	if (verbose>0)
+		std::cout << std::endl << model << std::endl;
+
+	// COMPUTES THE INITIAL WEIGTH MATRIX W_INIT (SHARED FOR ALL THE CLASSES)
+	// IF THE REQUESTED NUMBER OF K-MEANS INITIALIZATION ITERATIONS IS GRATER THAN ZERO
+	// IT INITIALIZES W_INIT USING K-MEANS. OTHERWISE IT INITIALIZES W_INIT RANDOMLY
+	if(maxKMIter>0){
+		Clustering<T> km=Clustering<T>();
+		km.trainKMeans(X, m, maxKMIter, verbose, W_INIT);
+	}else{
+		// RESEEDS THE NUMBER GENERATOR
+		std::srand(0);
+		// COMPUTES THE INITIAL WEIGTHS
+		W_INIT=MatrixXT::Random(m,d);
+	}
+	
+	//INITIALIZES W_OLD WITH W_INIT (FOR ALL THE CLASSES)
+	for(uint c=0; c<C; c++){
+		W_OLD.push_back(W_INIT);
+	}
+
+	ael(0)=1;
+	loss(0)=n;
+	obj(0)=loss(0);
+	reg_c=1;
+
+	const T q=(p==1)?DBL_MAX:p/(p-1);
+
+	// RESEEDS THE NUMBER GENERATOR
+	std::srand(0);
+	// OUTER LOOP ON THE CCCP ITERATIONS
+	for(iter=0; iter<maxIter; iter++ ){
+		rand_id=ArrayXT::LinSpaced(n,0,n-1);
+		std::random_shuffle(rand_id.data(),rand_id.data()+model.nSamp);
+
+		init = iter < initStep;
+		lastIteration = (iter+1)==maxIter;
+		need2Tst = lastIteration || (verbose==2) || testAllEpochs;
+		doAvg = averaging && need2Tst;
+
+		updates=0;
+		projections=0;
+
+		//SAVES THE PREVIOUS SOLUTION IN ORDER TO BE ABLE TO COMPUTE THE FIRST-ORDER TAYLOR APPROXIMATION OF THE SCORE
+		if (iter>0 && !init){
+			for(uint c=0; c<C; c++){
+				W_OLD[c]=W[c];
+			}
+		}
+
+		// ONE EPOCH OF S.G.D. DESCENT WITH PEGASOS
+		for( uint s=0;s<n;s++){
+			eta=1/(lambda*(s0+s+1));
+			it=rand_id(s);
+			Xt=X.col(it);
+			yt=y(it);
+
+			if (init){
+				if(maxKMIter>0){
+					//IF THE REQUESTED NUMBER OF K-MEANS INITIALIZATION ITERATIONS IS GRATER THAN ZERO
+					//IT INITALIZES localBetaYt USING THE CLUSTER CENTERS RETURNED BY K-MEANS
+					f=W_INIT.array().square().rowwise().sum().matrix()-2*W_INIT*Xt;
+					f.minCoeff(&ii);
+					localBetaYt=VectorXT::Zero(m);
+					localBetaYt(ii)=tau;
+				}else{
+					//OTHERWISE IT INITIALIZES THEM RANDOMLY
+					localBetaYt=VectorXT::Random(m).cwiseAbs();
+					//AND PROJECTS THEM INTO OMEGA_P
+					if (p==1){
+						simplexProj(localBetaYt, localBetaYt, tau, p, false);
+					}
+					else{
+						// THIS PROJECTION IS NOT OPTIMAL
+						// BUT PROVIDES A FEASIBLE RANDOM STARTING POINT
+						localBetaYt = localBetaYt * std::min((const T)1,(const T)(tau/pow(localBetaYt.array().abs().pow(p).sum(),1/p)));
+					}
+				}
+				for(uint cc=0; cc<C;cc++){
+					f.noalias()=W[cc]*Xt;
+					scores(cc)=localBetaYt.transpose()*f;
+				}
+				localBetaYwrong=localBetaYt;
+			}else{
+				//SETS THE CLASSESS TO BE MAXIMIZED
+				if (C==2){
+					CListMax(0)=(yt==0)?1:0;
+				}
+				else{
+					CListMax.head(yt)=VectorXT::LinSpaced(yt,0,yt-1);
+					CListMax.segment(yt,C-1-yt)=VectorXT::LinSpaced(C-1-yt,yt+1,C-1);
+				}
+				/*
+				 * Computes the scores for the classes who's score need to be maximized
+				 */
+				/*//pragma omp parallel for shared(W,Xt,scores,localBeta,p,m,tau) private(ci, cc)*/
+				for (uint ci=0; ci<CListMax.rows(); ci++){
+					cc=CListMax(ci);
+					f.noalias()=W[cc]*Xt;
+
+					// FAST IMPLEMENTATION
+					// COMPUTES THE SCORES FOR ALL THE CLASSES USING THE CLOSED PREDICTION RULE
+					// (FASTER AND NUMERICALLY MORE ACCURATE)
+					// THE OPTIMAL BETA (ONLY) FOR THE MOST WRONG PREDICTION
+					// IS THEN COMPUTED ONLY IF A LOSS IS SUFFERED. (SEE BELOW)
+					if (p==1){
+						scores(cc)=f.array().max(zeroR).maxCoeff();
+					}
+					else if (p==2){
+						scores(cc)=sqrt(f.array().max(zeroR).square().sum());
+					}
+					else{
+						scores(cc)=pow(f.array().max(zeroR).pow(q).sum(),1/q);
+					}
+				}
+				/*
+				 * Computes score for the correct class
+				 * using the first-order Taylor approximation of s_W(xt,yt) around W_OLD
+				 */
+				f.noalias()=W[yt]*Xt;
+				f_old.noalias()=W_OLD[yt]*Xt;
+				computeOptimalBeta(f_old, localBetaYt, p, q, m, tau);
+				scores(yt)=localBetaYt.transpose()*f;
+			}
+			if(lastIteration && returnLocalBeta)
+				localBetaClass.col(it)=localBetaYt;
+
+			// COMPUTES THE LOSS
+			margin_true=scores(yt);
+			scores(yt)=-INFINITY;
+			margin_wrong=scores.maxCoeff(&y_wrong);
+			sampLoss= std::max((const T)(1 - (margin_true - margin_wrong)*reg_c), (const T)0);
+			avgLoss(iter)+=sampLoss;
+
+			// FAST IMPLEMENTATION
+			// IF A LOSS IS SUFFERED, THE OPTIMAL BETA
+			// FOR THE MOST WRONG PREDICTION IS COMPUTED
+			if(!init && sampLoss>0){
+				f.noalias()=W[y_wrong]*Xt;
+				computeOptimalBeta(f, localBetaYwrong, p, q, m, tau);
+			}
+
+			// IT STARTS PERFORMING THE FIRST PART OF THE
+			// PEGASOS-UPDATE STEP (actually the W scaling is
+			// postponed till the loss is grater then 0)
+			reg=(1-eta*lambda);
+			reg_c=reg*reg_c;
+			nW=nW*pow(reg,2);
+
+			/*TO AVOID NUMERICAL PROBLEMS, WHENEVER
+             reg_c BECOMES SMALLER THAN A CONSTANT (10^-1)
+             IT PERFORMS THE NORMALIZATION AND RESETS
+             reg_c TO 1*/
+			if (reg_c <1e-1){
+				for (uint cc=0;cc<C;cc++){
+					W[cc]=W[cc]*reg_c;
+				}
+				reg_c=1;
+			}
+			// IF THE LOSS IS GRATER THAN ZERO
+			if (sampLoss>0){
+				updates+=1;
+
+				// IT FINISHES PERFORMING THE FIRST PART OF
+				// THE PEGASOS-UPDATE STEP
+				if (reg_c !=1){
+					for (uint cc=0;cc<C;cc++){
+						W[cc]=W[cc]*reg_c;
+					}
+					reg_c=1;
+				}
+				//SECOND PART OF THE PEGASOS-UPDATE STEP
+				W[y_wrong].noalias()-=eta*localBetaYwrong*Xt.transpose();
+				W[yt].noalias()+=eta*localBetaYt*Xt.transpose();
+
+				// PARTIALLY INCREMENTAL BATCH
+				// COMPUTATION OF THE SQ. NORM
+				nW(yt)=W[yt].squaredNorm();
+				nW(y_wrong)=W[y_wrong].squaredNorm();
+				nw=nW.sum();
+
+				// STEP 2: PEGASOS PROJECTION
+				proj_c=sqrt(2*n/(lambda*nw));
+				if (proj_c < 1){
+					projections+=1;
+					for (uint cc=0;cc<C;cc++){
+						W[cc]=W[cc]*proj_c;
+					}
+					nW=nW*pow(proj_c,2);
+				}
+			}
+
+			if(doAvg){
+				//Since s=0 for the first sample, W2 is automatically reset at each iter
+				for(uint  cc=0; cc<C;cc++){
+					//This step might be slower than doing W2[cc]=W2[cc] + W[cc]*reg_c); and at the end do W2[cc]=W2[cc] / n;
+					//but it might also be numerically more stable;
+					W2[cc]=(W2[cc]*s + W[cc]*reg_c)/(s+1); 
+				}
+			}
+		}
+
+		// RESETS THE SCALING
+		if ( reg_c!=1){
+			for (uint  cc=0; cc<C;cc++)
+				W[cc]=W[cc]*reg_c;
+			reg_c=1;
+		}
+
+		// OUTPUTS SOME VISUALIZATIONS
+		ael(iter)=avgLoss(iter)/n;
+		if (verbose==2){
+			MatrixXT dec_values(n,C);
+			ArrayXi pred_labels(n);
+			T passLoss=0.;
+			T tr_accur=testML3(model, X, y, dec_values, pred_labels,passLoss);
+			loss(iter)=passLoss;
+			obj(iter)=lambda/2*nW.sum()+loss(iter);
+			std::cout<<"#iter "<<iter<<"/"<<(maxIter-1)<<", Obj:"<< obj(iter)<<", Loss:"<<loss(iter)<<", AEL:"<<ael(iter)<<", Updates:"<<updates<<", Projections:"<<projections<<std::endl;
+		}
+		else if (verbose==1){
+			std::cout<<"#iter "<<iter<<"/"<<(maxIter-1)<<", AEL:"<<ael(iter)<<", Updates:"<<updates<<", Projections:"<<projections<<std::endl;	
+		}
+
+		//INCREMENTS s0 BY 2n
+		s0+=2*n;
+
+#ifdef mex_h
+		mexEvalString("drawnow");
+#endif
+
+		//TESTS THE TRAINED MODEL ON THE TESTING SET
+		if (testAllEpochs){
+			accuracyTe = testML3(model,Xte,yte);
+			teAcc(iter)=accuracyTe;
+			if (verbose >= 1){
+				std::cout<<"TeAcc: "<<accuracyTe*100<<std::endl;
+#ifdef mex_h
+				mexEvalString("drawnow");
+#endif
+			}
+		}
+	}
+}
+
+template<typename T>
+T ML3<T>::testML3(const Model<T> &model, const MatrixXT &X, const ArrayXi &y, const std::vector<std::vector<VectorXT> > &testLocalBeta, T &avgLoss, const bool fixedBeta, const bool computeLoss, MatrixXT &dec_values, ArrayXi &pred_labels, const bool computeBeta, MatrixXT &pred_beta){
+	ArrayXT scores, c;
+	VectorXT Xt, f, betaClass;
+	std::vector<VectorXT> localBeta;
+	typename VectorXT::Index pred;
+
+	T accuracy, margin_true, margin_wrong;
+
+	const uint &m=model.m;
+	const uint &C=model.nCla;
+	const T &p=model.p;
+	const T &tau=model.tau;
+	const bool &averaging=model.averaging;
+	const T q=p/(p-1);
+
+	const uint n= X.cols();
+	const uint d= X.rows();
+
+	const ArrayXT zeroR=ArrayXT::Zero(m);
+	const ArrayXT zeroC=ArrayXT::Zero(C);
+	const std::vector<MatrixXT> &W= (averaging)?model.W2:model.W;
+
+	if (computeBeta){
+		localBeta.reserve(C);
+		for(uint c=0; c<C;c++){
+			localBeta.push_back(VectorXT::Zero(m));
+		}
+	}
+
+	/*//	pragma omp parallel for shared(W,X,q,testLocalBeta,dec_values,pred_labels) private(i,cc,f,c,scores,margin_true,margin_wrong)*/
+	for (uint i=0; i<n; i++){
+		scores=zeroC;
+		if (!fixedBeta){
+			if(computeBeta){
+
+				// PREDICTS COMPUTING ALSO THE BETA
+				for (uint cc=0;cc<C;cc++){
+					f.noalias()=W[cc]*X.col(i);
+					computeOptimalBeta(f, betaClass, p, q, m, tau);
+					localBeta[cc]=betaClass;
+					scores(cc)=betaClass.transpose()*f;
+				}
+
+			}else{
+				// PREDICTS USING ||max(Wx,0)||_q
+				for (uint cc=0;cc<C;cc++){
+					f.noalias()=W[cc]*X.col(i);
+					c=f.array().max(zeroR);
+					if (p==1){
+						scores(cc)=c.maxCoeff();
+					}
+					else if (p==2){
+						scores(cc)=sqrt(c.square().sum());
+					}
+					else{
+						scores(cc)=pow(c.pow(q).sum(),1/q);
+					}
+				}
+			}
+		}
+		else{
+			for (uint cc=0;cc<C;cc++){
+				scores(cc)=testLocalBeta[cc][i].transpose()*W[cc]*X.col(i);
+				// SETS THE LOCAL BETA TO tau*m^(-1/p) AND PREDICTS USING THE LEARNED W
+				//scores(cc)=tau*pow(m,-1/p)*VectorXT::Ones(m).transpose()*W[cc]*X.col(i);
+			}
+		}
+
+		scores.maxCoeff(&pred);
+		if(computeBeta && !fixedBeta)
+			pred_beta.row(i)=localBeta[pred];
+
+		if (computeLoss){
+			margin_true=scores(y(i));
+			scores(y(i))=-INFINITY;
+			margin_wrong=scores.maxCoeff();
+			avgLoss+=std::max((const T)(1 - (margin_true - margin_wrong)), (const T)0);
+		}
+		pred_labels(i)=(uint)pred;
+		dec_values.row(i)=scores;
+	}
+	accuracy= ((T)(pred_labels.cwiseEqual(y).count()))/n;
+	avgLoss=avgLoss/n;
+	return accuracy;
+}
+
+template<typename T>
+T ML3<T>::testML3(const Model<T> &model, const MatrixXT &X, const ArrayXi &y){
+	uint n= X.cols();
+	const uint &C=model.nCla;
+	MatrixXT dec_values(n,C);
+	ArrayXi pred_labels(n);
+	return testML3(model, X, y,dec_values,pred_labels);
+}
+
+template<typename T>
+T ML3<T>::testML3(const Model<T> &model, const MatrixXT &X, const ArrayXi &y,MatrixXT &dec_values, ArrayXi &pred_labels, T &avgLoss){
+	std::vector<std::vector<VectorXT> > testLocalBeta;
+	const uint n  = X.cols();
+	const uint &m = model.m;
+	MatrixXT pred_beta(n,m);
+	return testML3(model, X, y, testLocalBeta, avgLoss, false, true,dec_values, pred_labels, false, pred_beta);
+}
+
+template<typename T>
+T ML3<T>::testML3(const Model<T> &model, const MatrixXT &X, const ArrayXi &y,MatrixXT &dec_values, ArrayXi &pred_labels, MatrixXT &pred_beta){
+	T avgLoss=0.;
+	std::vector<std::vector<VectorXT> > testLocalBeta;
+	return testML3(model, X, y, testLocalBeta, avgLoss, false, false,dec_values, pred_labels, true, pred_beta);
+}
+
+template<typename T>
+T ML3<T>::testML3(const Model<T> &model, const MatrixXT &X, const ArrayXi &y,MatrixXT &dec_values, ArrayXi &pred_labels){
+	T avgLoss=0.;
+	std::vector<std::vector<VectorXT> > testLocalBeta;
+	const uint n  = X.cols();
+	const uint &m = model.m;
+	MatrixXT pred_beta(n,m);
+	return testML3(model, X, y, testLocalBeta, avgLoss, false, false,dec_values, pred_labels, false, pred_beta);
+}
+
+template<typename T>
+T ML3<T>::testML3(const Model<T> &model, const MatrixXT &X, const ArrayXi &y, const std::vector<std::vector<VectorXT> > &testLocalBeta, MatrixXT &dec_values, ArrayXi &pred_labels){
+	T avgLoss=0.;
+	const uint n  = X.cols();
+	const uint &m = model.m;
+	MatrixXT pred_beta(n,m);
+	return testML3(model, X, y, testLocalBeta, avgLoss, true, false,dec_values, pred_labels, false, pred_beta);
+}
+
+template<typename T>
+T ML3<T>::testML3(const Model<T> &model, const MatrixXT &X, const ArrayXi &y, const std::vector<std::vector<VectorXT> > &testLocalBeta, MatrixXT &dec_values, ArrayXi &pred_labels, T &avgLoss){
+	const uint n  = X.cols();
+	const uint &m = model.m;
+	MatrixXT pred_beta(n,m);
+	return testML3(model, X, y, testLocalBeta, avgLoss, true, true, dec_values, pred_labels, false, pred_beta);
+}

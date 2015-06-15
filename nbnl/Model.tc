@@ -1,0 +1,154 @@
+/*
+ * Open source implementation of the ML3 classifier.
+ *
+ * If you find this software useful, please cite:
+ *
+ * "Multiclass Latent Locally Linear Support Vector Machines"
+ * Marco Fornoni, Barbara Caputo and Francesco Orabona
+ * JMLR Workshop and Conference Proceedings Volume 29 (ACML 2013 Proceedings)
+ *
+ * Copyright (c) 2013 Idiap Research Institute, http://www.idiap.ch/
+ * Written by Marco Fornoni <marco.fornoni@alumni.epfl.ch>
+ *
+ * This file is part of the ML3 Software.
+ *
+ * ML3 is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3 as
+ * published by the Free Software Foundation.
+ *
+ * ML3 is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with ML3. If not, see <http://www.gnu.org/licenses/>.
+ *
+ * Model.tc
+ * 
+ * Class representing a ML3 model
+ *
+ *  Created on: Apr 20, 2013
+ *      Author: Marco Fornoni
+ */
+
+//Default destructor
+template<typename T>
+Model<T>::~Model(){
+}
+
+//Default constructor
+template<typename T>
+Model<T>::Model(){
+	tau=1;
+	averaging=true;
+	initStep=1;
+	lambda=1;
+	m=10;
+	p=2;
+	s=0;
+	verbose=1;
+	nFeats=0;
+	nSamp=0;
+	nCla=0;
+	iter=0;
+	maxCCCPIter=30;
+	trTime=0;
+	returnLocalBeta=false;
+}
+
+
+//Main setter method
+template<typename T>
+void Model<T>::setParams(std::vector<MatrixXT> _W, std::vector<MatrixXT> _W2, MatrixXT _localBetaClass,  T _lambda, T _p, T _tau, uint _maxCCCPIter, T _m, bool _averaging, uint _maxKMIter, uint _initStep, uint _s0, uint _verbose, bool _returnLocalBeta){
+	m=_m;
+	nCla=_W.size();
+	nFeats=_W[0].cols();
+
+	W=_W;
+	W2=_W2;
+	localBetaClass=_localBetaClass;
+	lambda=_lambda;
+	p=_p;
+	tau= _tau;
+	maxCCCPIter=_maxCCCPIter;
+
+	averaging=_averaging;
+	maxKMIter=_maxKMIter;
+	initStep=_initStep;
+	s=_s0;
+	verbose=_verbose;
+
+	uint maxIter=maxCCCPIter+initStep;
+
+	avgLoss=VectorXT::Zero(maxIter);
+	ael=VectorXT::Zero(maxIter);
+	loss=VectorXT::Zero(maxIter);
+	obj=VectorXT::Zero(maxIter);
+	teAcc=VectorXT::Zero(maxIter);
+
+	returnLocalBeta=_returnLocalBeta;
+}
+
+//Model field names
+template<typename T>
+const char *Model<T>::fnames[]=
+{
+		"lambda",
+		"maxCCCPIter",
+		"verbose",
+		"nCla",
+		"nSamp",
+		"nFeats",
+		"m",
+		"p",
+		"tau",
+		"s",
+		"averaging",
+		"initStep",
+		"avgLoss",
+		"ael",
+		"loss",
+		"obj",
+		"teAcc",
+
+		"iter",
+		"W",
+		"W2",
+		"localBetaClass",
+		"trTime",
+
+		"returnLocalBeta",
+		"maxKMIter"
+};
+
+
+//Model output streamer
+template<typename T>
+std::ostream& operator<<(std::ostream& o, const Model<T> & m)
+{
+	const uint maxEl=3;
+	uint mcol=std::min((const uint)m.W[0].cols(),maxEl);
+	uint mrep=std::min(std::min((const uint)m.localBetaClass.cols(),(const uint)m.localBetaClass.rows()),maxEl);
+
+	o <<"Model:"<< std::endl;
+	o << Model<T>::fnames[0]<<": "<<m.lambda<<std::endl;
+	o << Model<T>::fnames[23]<<": "<<m.maxKMIter<<std::endl;
+	o << Model<T>::fnames[1]<<": "<<m.maxCCCPIter<<std::endl;
+	o << Model<T>::fnames[2]<<": "<<m.verbose<<std::endl;
+	o << Model<T>::fnames[3]<<": "<<m.nCla<<std::endl;
+	o << Model<T>::fnames[4]<<": "<<m.nSamp<<std::endl;
+	o << Model<T>::fnames[5]<<": "<<m.nFeats<<std::endl;
+	o << Model<T>::fnames[6]<<": "<<m.m<<std::endl;
+	o << Model<T>::fnames[7]<<": "<<m.p<<std::endl;
+	o << Model<T>::fnames[8]<<": "<<m.tau<<std::endl;
+	o << Model<T>::fnames[9]<<": "<<m.s<<std::endl;
+	o << Model<T>::fnames[10]<<": "<<m.averaging<<std::endl;
+	o << Model<T>::fnames[11]<<": "<<m.initStep<<std::endl;
+	o << Model<T>::fnames[18]<<": "<<m.W[0].topLeftCorner(1,mcol)<<"..."<<std::endl;
+	o << Model<T>::fnames[19]<<": "<<m.W2[0].topLeftCorner(1,mcol)<<"..."<<std::endl;
+	if(m.returnLocalBeta)
+		o << Model<T>::fnames[20]<<": "<<m.localBetaClass.topLeftCorner(mrep,1)<<"..."<<std::endl;
+
+	return o;
+}

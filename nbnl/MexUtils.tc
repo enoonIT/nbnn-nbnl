@@ -1,0 +1,414 @@
+/*
+ * Open source implementation of the ML3 classifier.
+ *
+ * If you find this software useful, please cite:
+ *
+ * "Multiclass Latent Locally Linear Support Vector Machines"
+ * Marco Fornoni, Barbara Caputo and Francesco Orabona
+ * JMLR Workshop and Conference Proceedings Volume 29 (ACML 2013 Proceedings)
+ *
+ * Copyright (c) 2013 Idiap Research Institute, http://www.idiap.ch/
+ * Written by Marco Fornoni <marco.fornoni@alumni.epfl.ch>
+ *
+ * This file is part of the ML3 Software.
+ *
+ * ML3 is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3 as
+ * published by the Free Software Foundation.
+ *
+ * ML3 is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with ML3. If not, see <http://www.gnu.org/licenses/>.
+ *
+ * MexUtils.tc
+ * 
+ * Utilities to interface ML3 to MATLAB
+ *
+ *  Created on: 2 May 2013
+ *      Author: Marco Fornoni
+ */
+
+template<typename T>
+void  MexUtils<T>::timer_reset( void )
+{
+	struct itimerval timer_reset;
+
+	timer_reset.it_interval.tv_sec = 0;
+	timer_reset.it_interval.tv_usec = 0;
+	timer_reset.it_value.tv_sec = TIMER_MAXETIME;
+	timer_reset.it_value.tv_usec = 0;
+
+	setitimer( ITIMER_VIRTUAL, &timer_reset, NULL );
+	getitimer(ITIMER_VIRTUAL, &timer_virt);
+}
+
+template<typename T>
+double MexUtils<T>::timer_query( void )
+{
+	struct itimerval timer_virt_current;
+	double elapsed_virt;
+	getitimer(ITIMER_VIRTUAL, &timer_virt_current);
+
+	elapsed_virt = (double)( (timer_virt.it_value.tv_sec-timer_virt_current.it_value.tv_sec)) + (double)(timer_virt.it_value.tv_usec-timer_virt_current.it_value.tv_usec)/1000/1000.0;
+	return elapsed_virt;
+}
+
+template<typename T>
+void MexUtils<T>::setOutput(mxArray * plhs[], int nlhs, T accuracy, ArrayXi &pred_labels, MatrixXT &dec_values, MatrixXT &pred_beta, const mxClassID  category) {
+	//RETURNS THE OUTPUT
+	T *data;
+	uint *uidata;
+
+	const uint n =pred_labels.rows();
+	const uint m =pred_beta.cols();
+	const uint C =dec_values.cols();
+
+	plhs[0] = mxCreateDoubleScalar(accuracy);
+
+	const mwSize size[]={n,1};
+	const mwSize sizeDec[]={n,C};
+	const mwSize sizeBeta[]={n,m};
+
+	if (nlhs>1){
+		plhs[1]=mxCreateNumericArray(2,size,mxUINT32_CLASS,mxREAL);
+		uidata = (uint*) mxGetData(plhs[1]);
+		for (uint j=0;j<n;j++){
+			uidata[j]=pred_labels(j);
+		}
+	}
+	if (nlhs>2){
+		plhs[2]=mxCreateNumericArray(2,sizeDec,category,mxREAL);
+		data = (T*) mxGetData(plhs[2]);
+		for (uint k=0;k<C;k++){
+			for (uint j=0;j<n;j++){
+				data[k*n+j]=dec_values(j,k);
+			}
+		}
+	}
+	if (nlhs>3){
+		plhs[3]=mxCreateNumericArray(2,sizeBeta,category,mxREAL);
+		data = (T*) mxGetData(plhs[3]);
+		for (uint k=0;k<m;k++){
+			for (uint j=0;j<n;j++){
+				data[k*n+j]=pred_beta(j,k);
+			}
+		}
+	}
+}
+
+template<typename T>
+mxArray* MexUtils<T>::mxCreateTScalar(T value, const mxClassID category){
+	const mwSize scalar[]={1,1};
+	mxArray* temp = mxCreateNumericArray(2,scalar,category,mxREAL);
+	T * tData = (T*) mxGetData(temp);
+	*tData = value;
+}
+
+template<typename T>
+void MexUtils<T>::setOutput(mxArray * plhs[], const Model<T> model, const mxClassID category) {
+	//RETURNS THE OUTPUT
+
+	uint nFeats=model.nFeats;
+	uint nCla=model.nCla;
+	uint m=model.m;
+	uint nSamp=model.nSamp;
+	uint maxKMIter=model.maxKMIter;
+	uint maxCCCPIter=model.maxCCCPIter;
+	uint initStep=model.initStep;
+	uint maxIter=maxCCCPIter+initStep;
+	uint s=model.s;
+	uint iter=model.iter;
+	uint averaging=model.averaging;
+
+	int nFields = sizeof(model.fnames) / sizeof(model.fnames[0]);
+	plhs[0] = mxCreateStructMatrix(1, 1, nFields, model.fnames);
+
+	mxArray *temp, *temp2;
+	double *pData, *pData2;
+	uint dim1=1;
+
+	uint *uival;
+
+	T *tData, *tData2;
+	const mwSize scalar[]={1,1};
+
+	temp = mxCreateNumericArray(2,scalar,category,mxREAL);
+	tData = (T*) mxGetData(temp);
+	tData[0] = model.lambda;
+	mxSetField(plhs[0], 0, model.fnames[0], temp);
+
+	temp = mxCreateNumericArray(2,scalar,mxUINT32_CLASS,mxREAL);
+	uival = (uint*) mxGetData(temp);
+	uival[0]=maxCCCPIter;
+	mxSetField(plhs[0], 0, model.fnames[1], temp);
+
+	temp = mxCreateNumericArray(2,scalar,mxUINT32_CLASS,mxREAL);
+	uival = (uint*) mxGetData(temp);
+	uival[0]=model.verbose;
+	mxSetField(plhs[0], 0, model.fnames[2], temp);
+
+	temp = mxCreateNumericArray(2,scalar,mxUINT32_CLASS,mxREAL);
+	uival = (uint*) mxGetData(temp);
+	uival[0]=nCla;
+	mxSetField(plhs[0], 0, model.fnames[3], temp);
+
+	temp = mxCreateNumericArray(2,scalar,mxUINT32_CLASS,mxREAL);
+	uival = (uint*) mxGetData(temp);
+	uival[0]=nSamp;
+	mxSetField(plhs[0], 0, model.fnames[4], temp);
+
+	temp = mxCreateNumericArray(2,scalar,mxUINT32_CLASS,mxREAL);
+	uival = (uint*) mxGetData(temp);
+	uival[0]=nFeats;
+	mxSetField(plhs[0], 0, model.fnames[5], temp);
+
+	temp = mxCreateNumericArray(2,scalar,mxUINT32_CLASS,mxREAL);
+	uival = (uint*) mxGetData(temp);
+	uival[0]=m;
+	mxSetField(plhs[0], 0, model.fnames[6], temp);
+
+	temp = mxCreateNumericArray(2,scalar,mxUINT32_CLASS,mxREAL);
+	uival = (uint*) mxGetData(temp);
+	uival[0]=s;
+	mxSetField(plhs[0], 0, model.fnames[9], temp);
+
+	temp = mxCreateNumericArray(2,scalar,category,mxREAL);
+	tData = (T*) mxGetData(temp);
+	tData[0] = model.p;
+	mxSetField(plhs[0], 0, model.fnames[7], temp);
+
+	temp = mxCreateNumericArray(2,scalar,category,mxREAL);
+	tData = (T*) mxGetData(temp);
+	tData[0] = model.tau;
+	mxSetField(plhs[0], 0, model.fnames[8], temp);
+
+	temp = mxCreateLogicalScalar(averaging);
+	mxSetField(plhs[0], 0, model.fnames[10], temp);
+
+	temp = mxCreateNumericArray(2,scalar,mxUINT32_CLASS,mxREAL);
+	uival = (uint*) mxGetData(temp);
+	uival[0]=model.initStep;
+	mxSetField(plhs[0], 0, model.fnames[11], temp);
+
+	temp = mxCreateNumericMatrix(maxIter, 1, category,  mxREAL);
+	tData = (T*) mxGetData(temp);
+	for (uint i=0;i<maxIter;i++){
+		tData[i] = model.avgLoss(i);
+	}
+	mxSetField(plhs[0], 0, model.fnames[12], temp);
+
+	temp = mxCreateNumericMatrix(maxIter, 1, category,  mxREAL);
+	tData = (T*) mxGetData(temp);
+	for (uint i=0;i<maxIter;i++){
+		tData[i] = model.ael(i);
+	}
+	mxSetField(plhs[0], 0, model.fnames[13], temp);
+
+	temp = mxCreateNumericMatrix(maxIter, 1, category,  mxREAL);
+	tData = (T*) mxGetData(temp);
+	for (uint i=0;i<maxIter;i++){
+		tData[i] = model.loss(i);
+	}
+	mxSetField(plhs[0], 0, model.fnames[14], temp);
+
+	temp = mxCreateNumericMatrix(maxIter, 1, category,  mxREAL);
+	tData = (T*) mxGetData(temp);
+	for (uint i=0;i<maxIter;i++){
+		tData[i] = model.obj(i);
+	}
+	mxSetField(plhs[0], 0, model.fnames[15], temp);
+
+	temp = mxCreateNumericMatrix(maxIter, 1, category,  mxREAL);
+	tData = (T*) mxGetData(temp);
+	for (uint i=0;i<maxIter;i++){
+		tData[i] = model.teAcc(i);
+	}
+	mxSetField(plhs[0], 0, model.fnames[16], temp);
+
+	temp = mxCreateNumericArray(2,scalar,mxUINT32_CLASS,mxREAL);
+	uival = (uint*) mxGetData(temp);
+	uival[0]=iter;
+	mxSetField(plhs[0], 0, model.fnames[17], temp);
+
+	temp= mxCreateCellMatrix(nCla,1);
+	for(uint i=0; i<nCla;i++){
+		temp2 = mxCreateNumericMatrix(m, nFeats, category,  mxREAL);
+		tData2 = (T*) mxGetData(temp2);
+		for (uint j=0;j<m;j++){
+			for(int k=0;k<nFeats;k++){
+				tData2[k*m+j] = model.W[i](j,k);
+			}
+		}
+		mxSetCell(temp,i,temp2);
+	}
+	mxSetField(plhs[0], 0, model.fnames[18], temp);
+
+	temp= mxCreateCellMatrix(nCla,1);
+	for(uint i=0; i<nCla;i++){
+		temp2 = mxCreateNumericMatrix(m, nFeats, category,  mxREAL);
+		tData2 = (T*) mxGetData(temp2);
+		for (uint j=0;j<m;j++){
+			for(int k=0;k<nFeats;k++){
+				tData2[k*m+j] = model.W2[i](j,k);
+			}
+		}
+		mxSetCell(temp,i,temp2);
+	}
+	mxSetField(plhs[0], 0, model.fnames[19], temp);
+
+	if (model.returnLocalBeta){
+		temp = mxCreateNumericMatrix(m, nSamp, category,  mxREAL);
+		tData = (T*) mxGetData(temp);
+		for (uint j=0;j<m;j++){
+			for(int k=0;k<nSamp;k++){
+				tData[k*m+j] = model.localBetaClass(j,k);
+			}
+		}
+		mxSetField(plhs[0], 0, model.fnames[20], temp);
+	}
+
+	temp = mxCreateNumericArray(2,scalar,category,mxREAL);
+	tData = (T*) mxGetData(temp);
+	tData[0] = model.trTime;
+	mxSetField(plhs[0], 0, model.fnames[21], temp);
+
+	temp = mxCreateLogicalScalar(model.returnLocalBeta);
+	mxSetField(plhs[0], 0, model.fnames[22], temp);
+
+	temp = mxCreateNumericArray(2,scalar,mxUINT32_CLASS,mxREAL);
+	uival = (uint*) mxGetData(temp);
+	uival[0]=maxKMIter;
+	mxSetField(plhs[0], 0, model.fnames[23], temp);
+}
+
+template<typename T>
+void MexUtils<T>::load_mex_model(const mxArray *prhs, Model<T> &model) {
+
+	T lambda, p, tau;
+	bool averaging, returnLocalBeta;
+	uint s, initStep, maxCCCPIter, maxKMIter, pass, nCla, nSamp, nFeats, m, verbose;
+
+	typedef typename Model<T>::MatrixXT MatrixXT;
+
+	std::vector<MatrixXT> W;
+	std::vector<MatrixXT> W2;
+	MatrixXT localBetaClass;
+
+	int e_fields, n_fields;
+	mxArray *v;
+	mxArray *u;
+	T *val;
+	bool *bval;
+	int *ival;
+	uint *uival;
+	const mwSize *dims, *dims2;
+
+	e_fields = 16;
+
+	n_fields = mxGetNumberOfFields(prhs);
+
+	if (n_fields < e_fields) {
+		char buffer [50];
+		sprintf(buffer,"model structure has %d arguments, while it should have at least %d",n_fields, e_fields);
+		mexErrMsgTxt(buffer);
+	}
+
+	v = mxGetField(prhs, 0, Model<T>::fnames[0]);
+	val = (T*) mxGetData(v);
+	lambda = *(val);
+
+	v = mxGetField(prhs, 0, Model<T>::fnames[1]);
+	uival = (uint *) mxGetData(v);
+	maxCCCPIter = (uint)*(uival);
+
+	v = mxGetField(prhs, 0, Model<T>::fnames[2]);
+	uival = (uint *) mxGetData(v);
+	verbose = (uint)*(uival);
+
+	v = mxGetField(prhs, 0, Model<T>::fnames[3]);
+	uival = (uint *) mxGetData(v);
+	nCla = (uint)*(uival);
+
+	v = mxGetField(prhs, 0, Model<T>::fnames[4]);
+	uival = (uint*) mxGetData(v);
+	nSamp = (uint)*(uival);
+
+	v = mxGetField(prhs, 0, Model<T>::fnames[5]);
+	uival = (uint*) mxGetData(v);
+	nFeats = (uint)*(uival);
+
+	v = mxGetField(prhs, 0, Model<T>::fnames[6]);
+	uival = (uint *) mxGetData(v);
+	m = (uint)*(uival);
+
+	v = mxGetField(prhs, 0, Model<T>::fnames[7]);
+	val = (T*) mxGetData(v);
+	p = *(val);
+
+	v = mxGetField(prhs, 0, Model<T>::fnames[8]);
+	val = (T*) mxGetData(v);
+	tau = *(val);
+
+	v = mxGetField(prhs, 0, Model<T>::fnames[9]);
+	uival = (uint *) mxGetData(v);
+	s = (uint)*(uival);
+
+	v = mxGetField(prhs, 0, Model<T>::fnames[10]);
+	bval = (bool *)mxGetData(v);
+	averaging = *(bval);
+
+	v = mxGetField(prhs, 0, Model<T>::fnames[11]);
+	uival = (uint *) mxGetData(v);
+	initStep = (uint)*(uival);
+
+	v = mxGetField(prhs, 0, Model<T>::fnames[18]);
+	W.reserve(nCla);
+	if (v!=NULL){
+		dims = mxGetDimensions(v);
+		nCla=dims[0];
+		for(uint i=0; i<nCla;i++){
+			u = mxGetCell(v, i);
+			dims2 = mxGetDimensions(u);
+			val = (T*) mxGetData(u);
+			W.push_back(Map<MatrixXT>(val,dims2[0],dims2[1]));
+		}
+	}else{
+		for(uint i=0; i<nCla;i++){
+			W.push_back(MatrixXT::Zero(m,nFeats));
+		}
+	}
+
+	v = mxGetField(prhs, 0, Model<T>::fnames[19]);
+	W2.reserve(nCla);
+	if (v!=NULL){
+		dims = mxGetDimensions(v);
+		nCla=dims[0];
+		for(uint i=0; i<nCla;i++){
+			u = mxGetCell(v, i);
+			dims2 = mxGetDimensions(u);
+			val = (T*) mxGetData(u);
+			W2.push_back(Map<MatrixXT>(val,dims2[0],dims2[1]));
+		}
+	}else{
+		for(uint i=0; i<nCla;i++){
+			W2.push_back(MatrixXT::Zero(m,nFeats));
+		}
+	}
+
+	v = mxGetField(prhs, 0, Model<T>::fnames[22]);
+	bval = (bool *)mxGetData(v);
+	returnLocalBeta = *(bval);
+	
+	v = mxGetField(prhs, 0, Model<T>::fnames[23]);
+	uival = (uint *) mxGetData(v);
+	maxKMIter = (uint)*(uival);
+
+	localBetaClass= (returnLocalBeta)?MatrixXT::Zero(m,nSamp):MatrixXT::Zero(0,0);
+
+	model.setParams(W, W2, localBetaClass, lambda, p, tau, maxCCCPIter, m, averaging, maxKMIter, initStep, s, verbose, returnLocalBeta);
+	model.nSamp=nSamp;
+}
