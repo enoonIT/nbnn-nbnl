@@ -55,6 +55,10 @@ def get_arguments():
                         help="DECAF oversampling. Flip/corner etc.")
     parser.add_argument("--layer-name", dest="layer_name",
                         help="Decaf layer name.")
+    parser.add_argument("--network-data-dir", dest="network_data_dir",
+                        help="Directory holding the network weights.")
+    parser.add_argument("--patch-method", dest="patch_method",
+                        help="What method to use to extract patches.")
 
     args = parser.parse_args()
 
@@ -152,12 +156,15 @@ class Dataset:
     def close(self):
         self.hfile.close()
 
-def extract_decaf(input_dir, output_dir, files, num_patches, patch_size, image_dim, levels, oversample, layer_name, decaf_oversample):
+def extract_decaf(input_dir, output_dir, network_data_dir, files, num_patches, patch_size, image_dim, levels, oversample, layer_name, decaf_oversample, extraction_method):
     log = get_logger()
 
     #ex = DecafExtractor.DecafExtractor(layer_name)
-    ex = CaffeExtractor.CaffeExtractor(layer_name)
-    ex.set_parameters(patch_size, num_patches, levels, image_dim, decaf_oversample=decaf_oversample)
+    ex = CaffeExtractor.CaffeExtractor(layer_name, 
+				       network_data_dir + 'hybridCNN_iter_700000_upgraded.caffemodel', 
+				       network_data_dir + 'hybridCNN_deploy_no_relu_upgraded.prototxt', 
+				       network_data_dir + 'hybrid_mean.npy')
+    ex.set_parameters(patch_size, num_patches, levels, image_dim, decaf_oversample, extraction_method)
 
     if oversample:
         log.info('Extracting with zooming & rotations!')
@@ -233,14 +240,14 @@ if __name__ == '__main__':
 
         log.info('Extracting from training files...')
         output_dirname = join(args.output_dir, 'train', 'split_%d' % args.split)
-        extract(args.input_dir, output_dirname, train_files, args.patches, args.patch_size, args.image_dim, args.levels, args.oversample, args.layer_name, args.decaf_oversample)
+        extract(args.input_dir, output_dirname, args.network_data_dir, train_files, args.patches, args.patch_size, args.image_dim, args.levels, args.oversample, args.layer_name, args.decaf_oversample, args.patch_method)
 
         log.info('Extracting from testing files...')
         output_dirname = join(args.output_dir, 'test', 'split_%d' % args.split)
-        extract(args.input_dir, output_dirname, test_files, args.patches, args.patch_size, args.image_dim, args.levels, args.oversample, args.layer_name, args.decaf_oversample)
+        extract(args.input_dir, output_dirname, args.network_data_dir, test_files, args.patches, args.patch_size, args.image_dim, args.levels, args.oversample, args.layer_name, args.decaf_oversample, args.patch_method)
     else:
         log.info('Extracting all files...')
         output_dirname = args.output_dir
-        extract(args.input_dir, output_dirname, files, args.patches, args.patch_size, args.image_dim, args.levels, args.oversample, args.layer_name, args.decaf_oversample)
+        extract(args.input_dir, output_dirname, args.network_data_dir, files, args.patches, args.patch_size, args.image_dim, args.levels, args.oversample, args.layer_name, args.decaf_oversample, args.patch_method)
 
 

@@ -95,9 +95,7 @@ class ExtractedFeatures:
         return (self.patches, self.pos)
 
 class CaffeExtractor:
-    def __init__(self, layer_name,
-                 model_path = 'dist/places/hybridCNN_iter_700000_upgraded.caffemodel', #hybridCNN_iter_700000_upgraded.caffemodel
-                 meta_path = 'dist/places/hybridCNN_deploy_no_relu_upgraded.prototxt'):
+    def __init__(self, layer_name, model_path, meta_path, data_mean_path):
         self.layer_name = layer_name
         caffe.set_mode_cpu()
         self.net = caffe.Net(meta_path, model_path, caffe.TEST)
@@ -105,18 +103,20 @@ class CaffeExtractor:
         # input preprocessing: 'data' is the name of the input blob == net.inputs[0]
         self.transformer = caffe.io.Transformer({'data': self.net.blobs['data'].data.shape})
         self.transformer.set_transpose('data', (2,0,1))
-        self.transformer.set_mean('data', np.load('dist/places/hybrid_mean.npy').mean(1).mean(1)) # mean pixel
+        self.transformer.set_mean('data', np.load(data_mean_path).mean(1).mean(1)) # mean pixel
         self.transformer.set_raw_scale('data', 255)  # the reference model operates on images in [0,255] range instead of [0,1]
         self.transformer.set_channel_swap('data', (2,1,0))  # the reference model has channels in BGR order instead of RGB
         self.net.blobs['data'].reshape(1,3,227,227)
 
-    def set_parameters(self, patch_size, patches_per_image, levels, image_dim, decaf_oversample=False):
+    def set_parameters(self, patch_size, patches_per_image, levels, image_dim, decaf_oversample, extraction_method):
         self.patch_size = patch_size
         self.patches_per_image = patches_per_image
         self.levels = levels
         self.image_dim = image_dim
         self.decaf_oversample = decaf_oversample
-
+	self.extraction_method=self.extract
+	if(extraction_method=="extra"):
+	  self.extraction_method=self.balanced_extract
         self.patch_sizes = map(int, self.patch_size * 2**np.arange(0,levels,1.0))
         print self.patch_sizes
 
@@ -193,7 +193,7 @@ class CaffeExtractor:
         # Applying transformations and extracting features
         for xform in self.transforms:
             im_ = xform.apply(im)
-            self.extract(im_, feature_storage, xform.check_coords, xform, filename)
+            self.extraction_method(im_, feature_storage, xform.check_coords, xform, filename)
 
         log.info('Done. Extracted: %d.', feature_storage.cursor)
         return feature_storage
