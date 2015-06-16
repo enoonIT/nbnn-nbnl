@@ -4,7 +4,7 @@
 # This code creates training and testing splits from previously extraced image features
 #  --relu sets all negative features to 0
 
-INPUT_DIR=data/desc/sports/all_4_16_caffe7
+INPUT_DIR=$1
 OUTPUT_DIR=data/desc/sports
 NUM_SPLITS=5
 NUM_TRAIN=100	

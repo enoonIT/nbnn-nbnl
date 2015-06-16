@@ -37,3 +37,16 @@ python ./src/extract.py --input-dir $f --output-dir $OUTPUT_DIR \
        --patch-method $PATCH_EXTRACTION_METHOD
 done
 
+
+NUM_SPLITS=5
+NUM_TRAIN=100	
+NUM_TEST=100
+PATCHES_PER_IMAGE=100
+
+python ./src/makeSplits.py --input-dir $OUTPUT_DIR --output-dir $OUTPUT_DIR/relu \
+       --num-splits $NUM_SPLITS --patches $PATCHES_PER_IMAGE \
+       --num-train-images $NUM_TRAIN --num-test-images $NUM_TEST --relu
+       
+python ./src/makeSplits.py --input-dir $OUTPUT_DIR --output-dir $OUTPUT_DIR/nrelu \
+       --num-splits $NUM_SPLITS --patches $PATCHES_PER_IMAGE \
+       --num-train-images $NUM_TRAIN --num-test-images $NUM_TEST
