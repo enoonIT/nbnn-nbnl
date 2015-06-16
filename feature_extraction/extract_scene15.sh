@@ -3,7 +3,6 @@
 #
 # This code extracts DECAF feature descriptors from patches of scene15 dataset.
 # Configuration variables are set below (see extract_sports.sh for descriptions).
-# Note that descriptors are extracted only from one data split.
 #
 patch_size=(32 32 16)
 levels=(3 3 4)
