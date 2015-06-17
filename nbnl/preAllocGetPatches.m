@@ -1,7 +1,8 @@
-function [features, labels, dataInfo, scalingFactor, trainingMean, Ured] = preAllocGetPatches(dataset, split, test_or_train, oldScalingFactor, oldMean, oldUred)
+function [features, labels, dataInfo, scalingFactor, trainingMean, Ured] = preAllocGetPatches(dataFolder, split, test_or_train, oldScalingFactor, oldMean, oldUred)
     DATA_SIZE = 'single';
     FEATURE_SIZE = 4096 + 2;
-    dir_name = strcat('desc/',dataset, test_or_train,'/split_', num2str(split),'/');
+    dir_name = strcat(dataFolder, test_or_train,'/split_', num2str(split),'/')
+    whos('dir_name')
     files = dir(strcat(dir_name,'*.hdf5'));
 
     dataInfo = struct([]);
@@ -48,20 +49,18 @@ function [features, labels, dataInfo, scalingFactor, trainingMean, Ured] = preAl
 %     scalingMatrix  = repmat( 1./scalingFactor, 1,  size(features,2) );
 %     features = features .* scalingMatrix;
     disp('Centering vectors');
-    %me = repmat(trainingMean,1,size(features,2));
-    %features = features - me;
-    %clear me;
     for i=1:size(features,2)
         features(:,i) = features(:,i) - trainingMean;
     end
-    if nargin < 6
-        disp('Computing reduced PCA transform');
-        Ured = getPCATransform(features);
-    else
-        Ured = oldUred;
-    end
-    disp('Applying PCA reduction');
-    features = Ured'*features;
+%     if nargin < 6
+%         disp('Computing reduced PCA transform');
+%         Ured = getPCATransform(features);
+%     else
+%         Ured = oldUred;
+%     end
+%     disp('Applying PCA reduction');
+%     features = Ured'*features;
+    Ured = [];
     disp('Normalizing vectors...')
     features = normc(features);
 end
