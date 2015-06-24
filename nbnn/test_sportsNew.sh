@@ -4,7 +4,7 @@
 # This code tests NBNN classifier on a scenes15 dataset.
 #
 
-DATA_DIR=data/desc/sports/
+DATA_DIR=~/data/desc/sports/
 NUM_TRAIN=70
 NUM_TEST=60
 ALPHA=100
