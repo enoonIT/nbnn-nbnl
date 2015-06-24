@@ -8,7 +8,7 @@ function [ lambda, input_folder ] = jobInterpreter( jobId )
         index = nLambda;
     end
     lambda = lambda_range(index);
-    data_folders = {'all_16_4_base_hybrid_mean', 'all_32_3_base_hybrid_mean','all_32_3_extra_hybrid_mean'};
+    data_folders = {'all_16_4_extra_hybrid_mean', 'all_32_3_base_hybrid_mean','all_32_3_extra_hybrid_mean'};
     dataIndex = ceil(jobId/nLambda);
     input_folder = char(data_folders(dataIndex));
 end
