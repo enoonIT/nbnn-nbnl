@@ -48,4 +48,4 @@ splitAccuracy = accuracy
 
 fprintf('Training time: %f hours\nTraining accuracy: %f\n',trainingTime/3600, trainingAccuracy);
 fprintf('Testing time %f\nTesting accuracy %f\n',mean(testingTime), testingAccuracy);
-save(outName,'lambda','input_folder','splitAccuracy','trainingAccuracy','testingAccuracy','trainingTime','testingTime');
+save(outName,'lambda','input_folder','splitAccuracy','trainingAccuracy','testingAccuracy','trainingTime','testingTime','split');
