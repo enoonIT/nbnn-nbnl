@@ -2,7 +2,6 @@ function [features, labels, dataInfo, scalingFactor, trainingMean, Ured] = preAl
     DATA_SIZE = 'single';
     FEATURE_SIZE = 4096 + 2;
     dir_name = strcat(dataFolder, test_or_train,'/split_', num2str(split),'/')
-    whos('dir_name')
     files = dir(strcat(dir_name,'*.hdf5'));
 
     dataInfo = struct([]);
