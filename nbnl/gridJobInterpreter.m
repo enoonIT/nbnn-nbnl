@@ -2,7 +2,7 @@ function [ lambda, input_folder, split ] = gridJobInterpreter( jobId )
 %JOBINTERPRETER Summary of this function goes here
 %   Detailed explanation goes here
     nLambda = 30;
-    lambda_range =  5*(1.5.^(1:nLambda)./10^6);
+    lambda_range =  linspace(1e-9,1e-5,nLambda);
     index = mod(jobId,nLambda);
     if index==0
         index = nLambda;
