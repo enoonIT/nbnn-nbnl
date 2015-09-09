@@ -39,6 +39,9 @@ def get_arguments():
     parser.add_argument("--patches", dest="patches", type=int, default=100,
                         help="Number of patches to extract per image.")
     parser.add_argument('--relu', dest='relu', action='store_true', default=False)
+    parser.add_argument('--limitCategories', dest='limit', action='store_true', default=False)
+    parser.add_argument("--category_list", dest="categories",
+                        help="File containing list of valid categories")
     
     args = parser.parse_args()
 
@@ -85,7 +88,7 @@ class Dataset:
 
         self.mode = 'creating'
         dt = special_dtype(vlen=bytes)
-	patches += 10 #for safety
+        patches += 10 #for safety
         self.hfile = HDF5File(output_filename, 'w', compression='gzip', compression_opts=9, fillvalue=0.0)
         self.patches = self.hfile.create_dataset('patches', (num_files * patches, patch_dim), dtype=patch_type, chunks=True)
         self.positions = self.hfile.create_dataset('positions', (num_files * patches, 2), dtype=pos_type, chunks=True)
@@ -133,8 +136,15 @@ def make_split(imageNumbers, output_name, output_dir, patches, positions, image_
             negs = p < 0
             p[negs] = 0
         ds.append(keys[idx], p, positions[ir[0]:ir[1]])
+    print "dataset with " + str(ds.keys.shape) + " elements"
     ds.close()
-
+    
+def get_legal_categories(categories_file):
+    with open(categories_file) as f:
+        lines = f.read().splitlines()
+        return lines
+    
+    
 if __name__ == '__main__':
     init_logging()
     log = get_logger()
@@ -144,13 +154,18 @@ if __name__ == '__main__':
       print "RELU active"
     else:
       print "RELU not active"
-      
+    if args.limit:
+        legalCategories = get_legal_categories()
+        print "Using subset of categories"
     # Determining image files to extract from
     files = sorted(glob(join(args.input_dir, '*.hdf5') ), key=basename)
     start = time.time()
+    
     for f in files:
         print "Loading file " + f
-
+        if(args.limit and not(f in legalCategories)):
+            print f + " not in selected categories, skipping"
+            continue
         hfile = HDF5File(f, 'r', compression='gzip', compression_opts=9, fillvalue=0.0)
         patches = hfile['patches']
         positions = hfile['positions']
@@ -166,7 +181,10 @@ if __name__ == '__main__':
             print "Starting split " + str(x)
             random.shuffle(imageList)
             trainIndexes = imageList[0:args.num_train_images]
-            testIndexes = imageList[args.num_train_images:args.num_train_images+args.num_test_images]
+            if(args.num_test_images==-1):
+                testIndexes = imageList[args.num_train_images:]
+            else:
+                testIndexes = imageList[args.num_train_images:args.num_train_images+args.num_test_images]
             make_split(trainIndexes, f, join(args.output_dir, 'train', 'split_%d' % x), patches, positions, image_index, keys, nPatches, args.relu)
             make_split(testIndexes, f, join(args.output_dir, 'test', 'split_%d' % x), patches, positions, image_index, keys, nPatches, args.relu)
         hfile.close()
