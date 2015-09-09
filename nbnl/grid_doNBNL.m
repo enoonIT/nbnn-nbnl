@@ -2,7 +2,7 @@
 % clc
 
 algM = 100
-algP = 1.5
+algP = 1.5;
 algIter= 30
 
 % data_folder = '~/data';
@@ -17,7 +17,7 @@ if exist(outName,'file')
     disp('Job already performed - skipping');
     return
 end
-[lambda, input_folder, split] = gridJobInterpreter(jobId);
+[algP lambda, input_folder, split] = gridJobInterpreter(jobId);
 dataset_dir = strcat(data_folder, '/desc/scene15/',input_folder, '/relu/')
 
 algo = ML3();
@@ -48,4 +48,4 @@ splitAccuracy = accuracy
 
 fprintf('Training time: %f hours\nTraining accuracy: %f\n',trainingTime/3600, trainingAccuracy);
 fprintf('Testing time %f\nTesting accuracy %f\n',mean(testingTime), testingAccuracy);
-save(outName,'lambda','input_folder','splitAccuracy','trainingAccuracy','testingAccuracy','trainingTime','testingTime','split');
+save(outName,'lambda','input_folder','splitAccuracy','trainingAccuracy','testingAccuracy','trainingTime','testingTime','split','algP');
