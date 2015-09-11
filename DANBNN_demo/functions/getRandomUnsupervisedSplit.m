@@ -12,6 +12,7 @@ function [ testLabels testData trainData] = getRandomUnsupervisedSplit( SourceDa
     trainData = cell(classes, 1);
     testLabels = [];
     testData = cell(1);
+    currentTestSample = 1;
     for c=1:classes
         sourceDataset = strcat(SourceDataset.path, Source{c}.name); %absolute path to class hdf5 file
         indexes = Source{c}.data;
@@ -26,6 +27,13 @@ function [ testLabels testData trainData] = getRandomUnsupervisedSplit( SourceDa
             targetDataset = strcat(TargetDataset.path, Target{c}.name);
             testId = Target{c}.data;
         end
+        % load test data
+        nSamples = size(testId,1);
+        for idx=1:nSamples
+            testData{currentTestSample} = loadPatch(testId(idx,:), targetDataset);
+            currentTestSample = currentTestSample+1;
+        end
+        testLabels = [testLabels; ones(nSamples,1)*c];
     end
     
     
