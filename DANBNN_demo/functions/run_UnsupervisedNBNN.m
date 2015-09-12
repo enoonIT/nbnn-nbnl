@@ -29,58 +29,38 @@
 %
 
 function [accuracyIN]=run_UnsupervisedNBNN(params)
+    tic, [yte te trainData] = getRandomUnsupervisedSplit( params.SourceDataset, params.TargetDataset, params.trainingSamples); toc
+    uy=unique(yte)'; %get class labels
+    I=eye(size(te{1},1),size(te{1},1)); %identity matrix the size of the feature descriptor (64 for surf, 4096 for CNN)
+    tic
+    for c=uy     %for each class 
+        feat_tr=trainData{c}; %(descriptorSize x nPatches)
 
-source = params.source;
-target = params.target;
+        build_params.algorithm='kdtree';
+        [index_T, params_T] = flann_build_index(feat_tr, build_params);
 
-% LOAD TARGET DATA
-name=['data_' target '.mat'];
-T=load(['./Office+Caltech/' name]); %loads features and labels
-clear name
-uy=unique(T.label); %get class labels
+        clear tr ntr
 
-tset=load(['./splits/' target '_select.mat']); %loads the IDs of the testing and testing images id_tr and id_tr
+        fprintf('Testing NBNN on class %d, with K=%d...\n',c,1);
+        K=1;
+        for j=1:numel(te)
+            feat_te=te{j};
+            if(mod(j,50)==0)
+                fprintf('Testing sample %d of %d\n', j, numel(te));
+            end
+            [ii,~]=flann_search(index_T, feat_te, K, params_T); %returns the indexes of the nearest patches for each test sample
+            diff=feat_te-feat_tr(:,ii);
+            delta=diff';
+            dec_values_T(j,c)=trace(delta*I*delta');
+            clear delta 
+        end
+        flann_free_index(index_T);
+        clear params_T feate_tr
 
-te_ind=[];
-yte=[];
-for c=uy %for each class
-    te_ind=[te_ind tset.id_te{c}]; %loads all testing indexes in one single array
-    yte=[yte T.label(tset.id_te{c})]; %same for labels
-end
-nte=numel(te_ind); %number of test images
-te=cell(nte,1); %create a cell for each test image
-[te{:}]=deal(T.feat{te_ind}); %loads the features for each image into the corresponding cell
-
-I=eye(size(te{1},1),size(te{1},1)); %identity matrix the size of the feature descriptor (64 for surf, 4096 for CNN)
-for c=uy     %for each class 
-
-    % IN-DOMAIN
-    ntr=numel(tset.id_tr{c}); %number of training samples for class c
-    tr=cell(ntr,1); % create cells for training images
-    [tr{:}]=deal(T.feat{tset.id_tr{c}}); %tr now holds the features for the training images of class c
-    feat_tr=cell2mat(tr'); % loads them into a single matrix
-      
-    build_params.algorithm='kdtree';
-    [index_T, params_T] = flann_build_index(feat_tr, build_params);
-    
-    clear tr ntr
-    
-    fprintf('Testing NBNN on class %d, with K=%d...\n',c,1);
-    K=1;
-    for j=1:numel(te_ind)
-        feat_te=te{j};
-        
-        [ii,~]=flann_search(index_T, feat_te, K, params_T); %returns the indexes of the nearest patches for each test sample
-        diff=feat_te-feat_tr(:,ii);
-        delta=diff';
-        dec_values_T(j,c)=trace(delta*I*delta');
-        clear delta 
     end
-    flann_free_index(index_T);
-    clear params_T feate_tr
-
-end
-[~, predict_labels_T]=min(dec_values_T,[],2);
-accuracyIN=sum(predict_labels_T==yte')/numel(yte')*100;
-
+    [~, predict_labels_T]=min(dec_values_T,[],2);
+    size(yte)
+    size(predict_labels_T)
+    accuracyIN=sum(predict_labels_T==yte)/numel(yte)*100;
+    toc
 end

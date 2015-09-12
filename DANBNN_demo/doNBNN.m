@@ -28,12 +28,26 @@
 % Contact the original author: ttommasi [at] esat.kuleuven.be
 %
 
+clear
 
 addpath ./functions/
 addpath ./flann/
 %select('amazon');
 %select('caltech');
 
-[accuracyIN]=run_NBNN('amazon');
-fprintf('\nNBNN Amazon->Amazon, rec. rate: %.2f %%', accuracyIN);
+params.trainingSamples = 20;
+spath = '~/data/desc/office/amazon/all_32_3_extra_hybrid_mean/';
+tpath = '~/data/desc/caltech10/all_32_3_extra_hybrid_mean/';
+categories = {'backpack.hdf5' 'headphones.hdf5' 'monitor.hdf5' 'bike.hdf5' 'keyboard.hdf5' 'mouse.hdf5' 'projector.hdf5' 'calculator.hdf5'  'laptop.hdf5' 'mug.hdf5'};
+s = getImageIDs(spath, categories);
+t = getImageIDs(tpath, categories);
+S.indexes = s;
+S.path = spath;
+T.indexes = t;
+T.path = tpath;
+params.SourceDataset = S;
+params.TargetDataset = T;
+
+[accuracyIN]=run_UnsupervisedNBNN(params);
+fprintf('\nNBNN Caltech10->Caltech10, rec. rate: %.2f %%', accuracyIN);
 fprintf('\n');
