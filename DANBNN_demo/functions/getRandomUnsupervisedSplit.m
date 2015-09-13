@@ -8,6 +8,7 @@ function [ testLabels testData trainData] = getRandomUnsupervisedSplit( SourceDa
     Source = SourceDataset.indexes;
     Target = TargetDataset.indexes;
     isSameDomain = strcmp(SourceDataset.path, TargetDataset.path); % true if Source and Target are the same
+    if(isSameDomain), disp 'Same domain',end;
     classes = numel(Source);
     trainData = cell(classes, 1);
     testLabels = [];
