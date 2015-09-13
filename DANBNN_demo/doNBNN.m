@@ -46,6 +46,7 @@ function doNBNN(data_folder, jobId)
     splits = 10;
     accuracy = zeros(splits,1);
     for i=1:splits
+        fprintf('\nSplit %d:\n',i);
         [accuracyIN]=run_UnsupervisedNBNN(params);
         fprintf('\nNBNN %s->%s, rec. rate: %.2f %%\n', params.SourceDataset.dataset, params.TargetDataset.dataset, accuracyIN);
         accuracy(i) = accuracyIN;
