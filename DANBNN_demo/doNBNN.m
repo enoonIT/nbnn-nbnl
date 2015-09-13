@@ -43,7 +43,7 @@ function doNBNN(data_folder, jobId)
     % tpath = '~/data/desc/caltech10/all_32_3_extra_hybrid_mean/';
     categories = {'backpack.hdf5' 'headphones.hdf5' 'monitor.hdf5' 'bike.hdf5' 'keyboard.hdf5' 'mouse.hdf5' 'projector.hdf5' 'calculator.hdf5'  'laptop.hdf5' 'mug.hdf5'};
     params = gridJobInterpreter(jobId,data_folder, categories);
-    splits = 2;
+    splits = 10;
     accuracy = zeros(splits,1);
     for i=1:splits
         [accuracyIN]=run_UnsupervisedNBNN(params);

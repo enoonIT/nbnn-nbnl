@@ -39,7 +39,7 @@ function [ testLabels testData trainData] = getRandomUnsupervisedSplit( SourceDa
             firstPatch = firstPatch + patchesForSample;
             currentTestSample = currentTestSample+1;
         end
-        fprintf('Loaded %d test samples\n',currentTestSample);
+        fprintf('Loaded %d test samples\n',currentTestSample-1);
         testLabels = [testLabels; ones(nSamples,1)*c];
     end
     
