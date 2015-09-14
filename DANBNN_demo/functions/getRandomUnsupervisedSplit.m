@@ -19,11 +19,21 @@ function [ testLabels testData trainData] = getRandomUnsupervisedSplit( SourceDa
         sourceDataset = strcat(SourceDataset.path, Source{c}.name); %absolute path to class hdf5 file
         indexes = Source{c}.data;
         shuffled = indexes(randperm(size(indexes,1)),:);
-        trainId = shuffled(1:trainingSamples, :);
+        nTrainSamples = trainingSamples;
+        nImages = size(shuffled,1);
+        if(nImages<=(trainingSamples+1)) % this is for the classes with less than a certain number of training samples
+            if(isSameDomain)
+                nTrainSamples = floor(nImages/2);
+            else
+                nTrainSamples = nImages;
+            end
+            fprintf('Class contains %d images, setting training sample size to %d\n',nImages,nTrainSamples);
+        end
+        trainId = shuffled(1:nTrainSamples, :);
         trainData{c} = loadPatches(trainId, sourceDataset);
         if(isSameDomain)
             targetDataset = sourceDataset;
-            testId = shuffled(trainingSamples+1:end, :);
+            testId = shuffled(nTrainSamples+1:end, :);
         else
             assert(strcmp(Source{c}.name, Target{c}.name)) % make sure the categories are actually the same!
             targetDataset = strcat(TargetDataset.path, Target{c}.name);

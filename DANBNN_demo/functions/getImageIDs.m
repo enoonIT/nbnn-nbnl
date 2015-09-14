@@ -9,7 +9,7 @@ function [ dataset_ids ] = getImageIDs( dir_name , allowedCategories)
         filename = file.name;
         if(not(isempty(allowedCategories))) %if we are limiting ourselfs to certain categories
             if(any(ismember(allowedCategories, filename)))
-                fprintf('Parsing: %s is an allowed category\n',filename);
+                fprintf('Parsing: %s is an allowed category - ',filename);
             else
                 fprintf('Skipping: %s is not an allowed category\n',filename);
                 continue;
@@ -22,8 +22,9 @@ function [ dataset_ids ] = getImageIDs( dir_name , allowedCategories)
         nImages = size(image_index,2);
         dataset_ids{x}.data = [(1:nImages)' image_index']; %first column is image id, 2nd is first patch, 3d is last patch
         dataset_ids{x}.name = filename;
+        fprintf('contains %d images\n',nImages);
         x = x+1;
     end
-    fprintf('Found %d valid categories for folder %s\n', numel(dataset_ids), dir_name);
+    fprintf('Found %d valid categories for folder %s\n\n', numel(dataset_ids), dir_name);
 end
 
