@@ -29,7 +29,7 @@
 %
 
 function [accuracyIN]=run_UnsupervisedNBNN(params)
-    tic, [yte te trainData] = getRandomUnsupervisedSplit( params.SourceDataset, params.TargetDataset, params.trainingSamples); toc
+    tic, [yte te trainData] = getRandomUnsupervisedSplit( params.SourceDataset, params.TargetDataset, params.trainingSamples, params.relu); toc
     uy=unique(yte)'; %get class labels
     I=eye(size(te{1},1),size(te{1},1)); %identity matrix the size of the feature descriptor (64 for surf, 4096 for CNN)
     tic

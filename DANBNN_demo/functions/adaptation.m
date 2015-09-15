@@ -38,12 +38,12 @@ uy=unique(S.label);
 % gamma = 1 - 0.1*(number_of_iterations)
 % here we consider only the initialization (number of iteration = 0)
 % and the first iteration (number of iteration = 1)
-gamma=[1 0.9];
-idxS=1:numel(S.label);
+gamma=[1 1 1 0.9]; %[1 0.9];
+idxS=1:numel(S.label); %%al source image indexes
 
 for j=1:numel(gamma)
     
-    idxS(remove)=[];
+    idxS(remove)=[]; %%remove source samples according to criterion
     
     ST.feat=S.feat(idxS);
     ST.label=S.label(idxS);

@@ -1,4 +1,4 @@
-function [ testLabels testData trainData] = getRandomUnsupervisedSplit( SourceDataset, TargetDataset, trainingSamples)
+function [ testLabels testData trainData] = getRandomUnsupervisedSplit( SourceDataset, TargetDataset, trainingSamples, relu)
 %GETRANDOMUNSUPERVISEDSPLIT Summary of this function goes here
 %   SourceDataset and TargetDataset .indexes are an array of cells containing the indexes and the
 %   start and end patches for the source and target datasets. 
@@ -30,7 +30,7 @@ function [ testLabels testData trainData] = getRandomUnsupervisedSplit( SourceDa
             fprintf('Class contains %d images, setting training sample size to %d\n',nImages,nTrainSamples);
         end
         trainId = shuffled(1:nTrainSamples, :);
-        trainData{c} = loadPatches(trainId, sourceDataset);
+        trainData{c} = loadPatches(trainId, sourceDataset, relu);
         if(isSameDomain)
             targetDataset = sourceDataset;
             testId = shuffled(nTrainSamples+1:end, :);
@@ -41,7 +41,7 @@ function [ testLabels testData trainData] = getRandomUnsupervisedSplit( SourceDa
         end
         % load test data
         nSamples = size(testId,1);
-        testDataTmp = loadPatches(testId, targetDataset); % load all the test patches
+        testDataTmp = loadPatches(testId, targetDataset, relu); % load all the test patches
         firstPatch = 1;
         for idx=1:nSamples % assign the test patches to the corresponding test cell
             patchesForSample = testId(idx,3) - testId(idx,2); 

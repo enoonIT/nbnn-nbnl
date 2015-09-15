@@ -61,6 +61,6 @@ te=cell(nte,1);
 [te{:}]=deal(T.feat{target_ind});
 yte=T.label(target_ind);
 
-accuracyCROSS=adaptation(SM,te,yte);
+accuracyCROSS=adaptation(SM,te,yte); %yte: labels, te: cell array(one per image) for the patches, 
 
 end
