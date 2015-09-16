@@ -45,5 +45,5 @@ fprintf('\nNBNN Amazon->Amazon, rec. rate: %.2f %%', accuracyIN);
 fprintf('\n');
 clear accuracyIN
 
-accuracyCROSS=run_DANBNN('caltech','amazon');
+accuracyCROSS=run_DANBNN('amazon','caltech');
 clear accuracyCROSS

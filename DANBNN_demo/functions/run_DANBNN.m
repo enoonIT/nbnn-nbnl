@@ -49,8 +49,8 @@ target_ind=[];
 for c=uy
 
     l=numel(sset.id_tr{c});
-    SM.feat(1+(c-1)*l:c*l)=S.feat(sset.id_tr{c});
-    SM.label(1+(c-1)*l:c*l)=S.label(sset.id_tr{c});
+    SM.feat(1+(c-1)*l:c*l)=S.feat(sset.id_tr{c}); %SM feat is 1 x numImages cell array, each cell is featureDIM x patchNum
+    SM.label(1+(c-1)*l:c*l)=S.label(sset.id_tr{c}); %label is 1 x nTrainImages
 
     target_ind=[target_ind tset.id_te{c}];
 
@@ -58,8 +58,8 @@ end
     
 nte=numel(target_ind);
 te=cell(nte,1);
-[te{:}]=deal(T.feat{target_ind});
-yte=T.label(target_ind);
+[te{:}]=deal(T.feat{target_ind}); %te is nImagesX1 cell array. each cell array is descriptorXpatchNum
+yte=T.label(target_ind); %yte is 1xtestItems
 
 accuracyCROSS=adaptation(SM,te,yte); %yte: labels, te: cell array(one per image) for the patches, 
 

@@ -1,4 +1,5 @@
 function selectedPatches = loadPatches(imageIds, dataset, relu)
+%   selectedPatches is featDescriptor x numPatches
     patchIndexes = imageIds(:,2:3);
     patches = h5read(dataset,'/patches');
     patchIndexes(:,1) = patchIndexes(:,1) + 1;
