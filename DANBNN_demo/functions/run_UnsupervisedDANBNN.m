@@ -29,13 +29,14 @@
 %
 
 function [accuracyIN]=run_UnsupervisedDANBNN(params)
-    tic, [yte te trainData] = getRandomUnsupervisedSplit( params.SourceDataset, params.TargetDataset, params.trainingSamples, params.relu); toc
+    tic, [yte te trainData trainIndexes] = getRandomUnsupervisedSplit( params.SourceDataset, params.TargetDataset, params.trainingSamples, params.relu); toc
     currentTestSample = 1;
+    SM.label = [];
     for x=1:numel(trainData) %foreach class
         firstPatch = 1;
         classData = trainData{x}; % descriptor X patches
         size(classData)
-        trainId = params.SourceDataset.indexes{x}.data;
+        trainId = trainIndexes{x};
         nSamples = size(trainId,1);
         for idx=1:nSamples % assign the test patches to the corresponding test cell
             patchesForSample = trainId(idx,3) - trainId(idx,2); 
@@ -44,9 +45,7 @@ function [accuracyIN]=run_UnsupervisedDANBNN(params)
             firstPatch = firstPatch + patchesForSample;
             currentTestSample = currentTestSample+1;
         end
-        l = size(trainData{x},2);
-        SM.label = [SM.label ones(1, l)*x];
-        current = current + l;
+        SM.label = [SM.label ones(1, nSamples)*x];
     end
     accuracyIN=adaptation(SM,te,yte);
 end

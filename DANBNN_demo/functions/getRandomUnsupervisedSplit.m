@@ -1,4 +1,4 @@
-function [ testLabels testData trainData] = getRandomUnsupervisedSplit( SourceDataset, TargetDataset, trainingSamples, relu)
+function [ testLabels testData trainData trainIndexes] = getRandomUnsupervisedSplit( SourceDataset, TargetDataset, trainingSamples, relu)
 %GETRANDOMUNSUPERVISEDSPLIT Summary of this function goes here
 %   SourceDataset and TargetDataset .indexes are an array of cells containing the indexes and the
 %   start and end patches for the source and target datasets. 
@@ -11,6 +11,7 @@ function [ testLabels testData trainData] = getRandomUnsupervisedSplit( SourceDa
     if(isSameDomain), disp 'Same domain',end;
     classes = numel(Source);
     trainData = cell(classes, 1);
+    trainIndexes = cell(classes, 1);
     testLabels = [];
     testData = cell(1);
     currentTestSample = 1;
@@ -30,6 +31,7 @@ function [ testLabels testData trainData] = getRandomUnsupervisedSplit( SourceDa
             fprintf('Class contains %d images, setting training sample size to %d\n',nImages,nTrainSamples);
         end
         trainId = shuffled(1:nTrainSamples, :);
+        trainIndexes{c} = trainId;
         trainData{c} = loadPatches(trainId, sourceDataset, relu);
         if(isSameDomain)
             targetDataset = sourceDataset;

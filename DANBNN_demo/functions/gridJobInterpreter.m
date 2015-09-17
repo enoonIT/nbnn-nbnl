@@ -36,7 +36,7 @@ function [ params ] = gridJobInterpreter( jobId , dataDir, categories)
     params.trainingSamples = trainingSamples;
     params.patchSize = patch;
     params.levels = level;
-    params.relu = true;
+    params.relu = false;
     fprintf('%d %s - %s -> %s - - - %d\n',jobId, folderName,sourceD,targetD, trainingSamples);
 end
 
