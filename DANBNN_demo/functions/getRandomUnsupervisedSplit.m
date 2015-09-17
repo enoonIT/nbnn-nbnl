@@ -1,10 +1,14 @@
-function [ testLabels testData trainData trainIndexes] = getRandomUnsupervisedSplit( SourceDataset, TargetDataset, trainingSamples, relu)
+function [ testLabels testData trainData trainIndexes] = getRandomUnsupervisedSplit( params)
 %GETRANDOMUNSUPERVISEDSPLIT Summary of this function goes here
 %   SourceDataset and TargetDataset .indexes are an array of cells containing the indexes and the
 %   start and end patches for the source and target datasets. 
 %   testLabels is an array containing the labels for the test set
 %   testData is a cell array (one cell per image) containing the patches
 %   trainData is a cell array (one cell per class) containing the patches
+    SourceDataset = params.SourceDataset;
+    TargetDataset = params.TargetDataset;
+    relu = params.relu;
+    trainingSamples = params.trainingSamples;
     Source = SourceDataset.indexes;
     Target = TargetDataset.indexes;
     isSameDomain = strcmp(SourceDataset.path, TargetDataset.path); % true if Source and Target are the same
@@ -45,14 +49,23 @@ function [ testLabels testData trainData trainIndexes] = getRandomUnsupervisedSp
         nSamples = size(testId,1);
         testDataTmp = loadPatches(testId, targetDataset, relu); % load all the test patches
         firstPatch = 1;
-        for idx=1:nSamples % assign the test patches to the corresponding test cell
+        start = 1;
+        if(params.supervised) %if supervised, add three images to training data
+            for x=1:3
+                patchesForSample = testId(x,3) - testId(x,2); 
+                trainData{c} = [trainData{c} testDataTmp(:, firstPatch:firstPatch + patchesForSample-1)];
+                firstPatch = firstPatch + patchesForSample;
+                start = x+1;
+            end
+        end
+        for idx=start:nSamples % assign the test patches to the corresponding test cell
             patchesForSample = testId(idx,3) - testId(idx,2); 
             testData{currentTestSample} = testDataTmp(:, firstPatch:firstPatch + patchesForSample-1);
             firstPatch = firstPatch + patchesForSample;
             currentTestSample = currentTestSample+1;
         end
         fprintf('Loaded %d test samples\n',currentTestSample-1);
-        testLabels = [testLabels; ones(nSamples,1)*c];
+        testLabels = [testLabels; ones((nSamples-start + 1),1)*c];
     end
     
     
