@@ -3,6 +3,11 @@ function [ params ] = gridJobInterpreter( jobId , dataDir, categories)
 %   we have 9 patch size configuration and 4 source and target datasets -
 %   we have 144 possible jobs
     % get algorithm parameters
+    params.relu = false;
+    if(jobId>144)
+        params.relu = true;
+        jobId = jobId - 144;
+    end
     BLOCK = 48; % 3 patch size * 4 source * 4 target
     patch_size=[16 32 64];
     levels=[1 2 3];
@@ -36,7 +41,6 @@ function [ params ] = gridJobInterpreter( jobId , dataDir, categories)
     params.trainingSamples = trainingSamples;
     params.patchSize = patch;
     params.levels = level;
-    params.relu = false;
     params.supervised = true;
     fprintf('%d %s - %s -> %s - - - %d\n',jobId, folderName,sourceD,targetD, trainingSamples);
 end
