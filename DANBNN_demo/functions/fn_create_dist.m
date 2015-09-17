@@ -48,7 +48,7 @@ for c=uy
     K=1;
     for j=1:numel(S.label)
 
-        if (ll~=j)
+        if (ll~=j) %if different class
             feat_te=S.feat{j};
             [ii,~]=flann_search(indexALL, feat_te, K, paramsALL(c));
             diff=feat_te-feat_ALL(:,ii);

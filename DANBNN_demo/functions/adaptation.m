@@ -62,12 +62,12 @@ for j=1:numel(gamma)
     
     fprintf('\nCalculate distances...\n');
     [DD,delta,deltate]=fn_create_dist(ST,te);
-    
+    fprintf('Distance calculated');
     if j>1
-        M=fn_create_metric(DD,delta,ST.label,gamma(j),Ns);
+        M=fn_create_metric(DD,delta,ST.label,gamma(j),Ns); %%delta is sample to class distance
     else
         for c=uy
-            M{c}=eye(size(te{1},1),size(te{1},1));
+            M{c}=eye(size(te{1},1),size(te{1},1)); %feature descritor X feature descriptor
         end
     end
 
@@ -77,7 +77,7 @@ for j=1:numel(gamma)
         fprintf('Testing NBNN on class %d, with K=%d...\n',c,1);
 
         for z=1:Ns
-              DS(z,c)=trace(delta{z,c}*M{c}*delta{z,c}');
+              DS(z,c)=trace(delta{z,c}*M{c}*delta{z,c}'); %computes distances from classes
         end
         
         for z=1:numel(yte)

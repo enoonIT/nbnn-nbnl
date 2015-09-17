@@ -28,8 +28,8 @@ function doNBNN(data_folder, jobId)
 % Contact the original author: ttommasi [at] esat.kuleuven.be
 %
 
-    addpath ./functions/
-    addpath ./flann/
+    myAddPath ./functions/
+    myAddPath ./flann/
     output_folder = strcat(data_folder,'/outputDANBNN/');
     if ~exist(output_folder, 'dir')
       mkdir(output_folder);

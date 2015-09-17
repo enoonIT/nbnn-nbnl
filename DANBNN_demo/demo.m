@@ -29,8 +29,8 @@
 %
 
 
-addpath ./functions/
-addpath ./flann/
+myAddPath ./functions/
+myAddPath ./flann/
 %select('amazon');
 %select('caltech');
 
