@@ -30,7 +30,7 @@
 
 % this version doesn't use lookup tables and computes the patch to class
 % distance on the fly
-function M=fn_create_metric(ST, te, gamma, Ns)
+function M=fn_create_metric_on_the_fly(ST, gamma, Ns)
 label = ST.label;
 lambda=0.5;
 

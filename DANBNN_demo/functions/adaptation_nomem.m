@@ -29,7 +29,7 @@
 %
 
 
-function acc = adaptation(S,te,yte)
+function acc = adaptation_nomem(S,te,yte)
 
 toadd=[];
 remove=[];
@@ -64,7 +64,7 @@ for j=1:numel(gamma)
     %[DD,delta,deltate]=fn_create_dist(ST,te);
     fprintf('Distance calculated\n');
     if j>1
-        M=fn_create_metric_on_the_fly(ST, te, gamma(j),Ns); 
+        M=fn_create_metric_on_the_fly(ST, gamma(j),Ns); 
     else
         for c=uy
             M{c}=eye(size(te{1},1),size(te{1},1)); %feature descritor X feature descriptor

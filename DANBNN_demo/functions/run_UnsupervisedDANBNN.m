@@ -35,7 +35,6 @@ function [accuracyIN]=run_UnsupervisedDANBNN(params)
     for x=1:numel(trainData) %foreach class
         firstPatch = 1;
         classData = trainData{x}; % descriptor X patches
-        size(classData)
         trainId = trainIndexes{x};
         nSamples = size(trainId,1);
         for idx=1:nSamples % assign the test patches to the corresponding test cell
@@ -47,5 +46,5 @@ function [accuracyIN]=run_UnsupervisedDANBNN(params)
         end
         SM.label = [SM.label ones(1, nSamples)*x];
     end
-    accuracyIN=adaptation_nomem(SM,te,yte);
+    accuracyIN=adaptation_nomem(SM,te',yte');
 end
