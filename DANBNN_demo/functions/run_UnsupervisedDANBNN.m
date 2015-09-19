@@ -39,7 +39,7 @@ function [accuracyIN]=run_UnsupervisedDANBNN(params)
         nSamples = size(trainId,1);
         for idx=1:nSamples % assign the test patches to the corresponding test cell
             patchesForSample = trainId(idx,3) - trainId(idx,2); 
-            fprintf('From %d to %d\n',firstPatch, (firstPatch+patchesForSample-1));
+            %fprintf('From %d to %d\n',firstPatch, (firstPatch+patchesForSample-1));
             SM.feat{currentTestSample} = classData(:, firstPatch:firstPatch + patchesForSample-1);
             firstPatch = firstPatch + patchesForSample;
             currentTestSample = currentTestSample+1;

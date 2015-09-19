@@ -99,9 +99,9 @@ for j=1:numel(gamma)
     accuracy(j)=sum(pred_labels{j}==yte')/numel(yte')*100;
     
     if j==1
-        fprintf('\nstep %d, NBNN Caltech->Amazon, rec. rate: %.2f %%\n', j, accuracy(j));
+        fprintf('\nstep %d, NBNN rec. rate: %.2f %%\n', j, accuracy(j));
     else
-        fprintf('\nstep %d, DA-NBNN Caltech->Amazon, rec. rate: %.2f %%\n', j, accuracy(j));
+        fprintf('\nstep %d, DA-NBNN rec. rate: %.2f %%\n', j, accuracy(j));
     end
     
     % if the label of a target sample added to the source changes between
