@@ -29,7 +29,7 @@
 %
 
 function [accuracyIN]=run_UnsupervisedDANBNN(params)
-    tic, [yte te trainData trainIndexes] = getRandomUnsupervisedSplit( params.SourceDataset, params.TargetDataset, params.trainingSamples, params.relu); toc
+    tic, [yte te trainData trainIndexes] = getRandomUnsupervisedSplit( params ); toc
     currentTestSample = 1;
     SM.label = [];
     for x=1:numel(trainData) %foreach class
