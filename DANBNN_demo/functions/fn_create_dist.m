@@ -54,7 +54,7 @@ for c=uy
             diff=feat_te-feat_ALL(:,ii);
             dec{j,c}=double(diff');
             clear feat_te ii diff
-        else
+        else %we must remove the image itself from available patches
             lll=ll;
             idx=find(lll==j);
             lll(idx)=[];
@@ -80,7 +80,7 @@ for c=uy
         DD{j,c}=dec{j,c}'*dec{j,c};
     end
     
-    for j=1:numel(te)
+    for j=1:numel(te) % compute patch to image class distance for test images
         feat_te=te{j};
         [ii,~]=flann_search(indexALL, feat_te, K, paramsALL(c));
         diff=feat_te-feat_ALL(:,ii);

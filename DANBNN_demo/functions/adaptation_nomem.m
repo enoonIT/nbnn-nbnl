@@ -38,7 +38,7 @@ uy=unique(S.label);
 % gamma = 1 - 0.1*(number_of_iterations)
 % here we consider only the initialization (number of iteration = 0)
 % and the first iteration (number of iteration = 1)
-gamma=[1 1 1 1 0.9]; %[1 0.9];
+gamma=[1 0.9]; %[1 0.9];
 idxS=1:numel(S.label); %%al source image indexes
 
 for j=1:numel(gamma)
@@ -61,10 +61,10 @@ for j=1:numel(gamma)
     end
     
     fprintf('\nCalculate distances...\n');
-    [DD,delta,deltate]=fn_create_dist(ST,te);
-    fprintf('Distance calculated');
+    %[DD,delta,deltate]=fn_create_dist(ST,te);
+    fprintf('Distance calculated\n');
     if j>1
-        M=fn_create_metric(DD,delta,ST.label,gamma(j),Ns); %%delta is sample to class distance
+        M=fn_create_metric_on_the_fly(ST, te, gamma(j),Ns); 
     else
         for c=uy
             M{c}=eye(size(te{1},1),size(te{1},1)); %feature descritor X feature descriptor
@@ -77,16 +77,19 @@ for j=1:numel(gamma)
         fprintf('Testing NBNN on class %d, with K=%d...\n',c,1);
 
         for z=1:Ns
-              DS(z,c)=trace(delta{z,c}*M{c}*delta{z,c}'); %computes distances from classes
+            delta = getDeltaTrain(ST,z,c);
+              DS(z,c)=trace(delta*M{c}*delta'); %computes distances from classes
         end
         
         for z=1:numel(yte)
             if ismember(toadd,z)
-              [~,pos]=find(toadd==z);
-              DT(z,c)=trace(delta{Ns+pos,c}*M{c}*delta{Ns+pos,c}');
-              clear pos
+                [~,pos]=find(toadd==z);
+                delta = getDeltaTrain(ST,Ns+pos,c);
+                DT(z,c)=trace(delta*M{c}*delta');
+                clear pos
             else
-              DT(z,c)=trace(deltate{z,c}*M{c}*deltate{z,c}');
+                deltate = getDeltaTest( ST, te,z,c);
+                DT(z,c)=trace(deltate*M{c}*deltate');
             end
             clear vec feat_te ii                   
         end

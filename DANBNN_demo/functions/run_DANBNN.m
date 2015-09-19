@@ -61,6 +61,6 @@ te=cell(nte,1);
 [te{:}]=deal(T.feat{target_ind}); %te is nImagesX1 cell array. each cell array is descriptorXpatchNum
 yte=T.label(target_ind); %yte is 1xtestItems
 
-accuracyCROSS=adaptation(SM,te,yte); %yte: labels, te: cell array(one per image) for the patches, 
+accuracyCROSS=adaptation_nomem(SM,te,yte); %yte: labels, te: cell array(one per image) for the patches, 
 
 end

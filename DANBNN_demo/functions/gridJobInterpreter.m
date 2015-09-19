@@ -1,13 +1,16 @@
-function [ params ] = gridJobInterpreter( jobId , dataDir, categories)
+function [ params ] = gridJobInterpreter( jobId , dataDir)
 %GRIDJOBINTERPRETER Summary of this function goes here
 %   we have 9 patch size configuration and 4 source and target datasets -
 %   we have 144 possible jobs
     % get algorithm parameters
     params.relu = false;
-    if(jobId>144)
-        params.relu = true;
-        jobId = jobId - 144;
-    end
+    categories = {'backpack.hdf5' 'headphones.hdf5' 'monitor.hdf5' 'bike.hdf5' 'keyboard.hdf5' 'mouse.hdf5' 'projector.hdf5' 'calculator.hdf5'  'laptop.hdf5' 'mug.hdf5'};
+    params.categories = categories;
+%     if(jobId>144)
+%         %params.relu = true;
+%         jobId = jobId - 144;
+%     end
+    jobId = mod(jobId, 144); if(jobId==0)jobId=144;end
     BLOCK = 48; % 3 patch size * 4 source * 4 target
     patch_size=[16 32 64];
     levels=[1 2 3];
@@ -41,7 +44,7 @@ function [ params ] = gridJobInterpreter( jobId , dataDir, categories)
     params.trainingSamples = trainingSamples;
     params.patchSize = patch;
     params.levels = level;
-    params.supervised = true;
+    params.supervised = false;
     fprintf('%d %s - %s -> %s - - - %d\n',jobId, folderName,sourceD,targetD, trainingSamples);
 end
 

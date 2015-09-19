@@ -38,7 +38,7 @@ uy=unique(S.label);
 % gamma = 1 - 0.1*(number_of_iterations)
 % here we consider only the initialization (number of iteration = 0)
 % and the first iteration (number of iteration = 1)
-gamma=[1 1 1 1 0.9]; %[1 0.9];
+gamma=[1 0.9]; %[1 0.9];
 idxS=1:numel(S.label); %%al source image indexes
 
 for j=1:numel(gamma)
@@ -61,10 +61,13 @@ for j=1:numel(gamma)
     end
     
     fprintf('\nCalculate distances...\n');
-    [DD,delta,deltate]=fn_create_dist(ST,te);
+    [DD,delta,deltate]=fn_create_dist(ST,te);%%delta is sample to class distance, trainImages X classe cell array, each cell is is patches X featureD
+    % deltate is the same but for test images: testImages x classes
+    % DD is trainImages x classes cell array, each cell is featureD x
+    % feature D and DD{s,c} = delta{s,c}' * delta{s,c}
     fprintf('Distance calculated');
     if j>1
-        M=fn_create_metric(DD,delta,ST.label,gamma(j),Ns); %%delta is sample to class distance
+        M=fn_create_metric(DD,delta,ST.label,gamma(j),Ns); 
     else
         for c=uy
             M{c}=eye(size(te{1},1),size(te{1},1)); %feature descritor X feature descriptor

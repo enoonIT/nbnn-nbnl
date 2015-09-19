@@ -34,15 +34,13 @@ function doDANBNN(data_folder, jobId)
     if ~exist(output_folder, 'dir')
       mkdir(output_folder);
     end
-    outName = strcat(output_folder,'job_DANBNN_Relu_',num2str(jobId),'.mat')
+    outName = strcat(output_folder,'job_DANBNN_',num2str(jobId),'.mat')
     if exist(outName,'file')
         disp('Job already performed - skipping');
         return
     end
-    % spath = '~/data/desc/office/amazon/all_32_3_extra_hybrid_mean/';
-    % tpath = '~/data/desc/caltech10/all_32_3_extra_hybrid_mean/';
-    categories = {'backpack.hdf5' 'headphones.hdf5' 'monitor.hdf5' 'bike.hdf5' 'keyboard.hdf5' 'mouse.hdf5' 'projector.hdf5' 'calculator.hdf5'  'laptop.hdf5' 'mug.hdf5'};
-    params = gridJobInterpreter(jobId,data_folder, categories);
+
+    params = gridJobInterpreter(jobId,data_folder);
     splits = 1;
     accuracy = zeros(splits,1);
     for i=1:splits
