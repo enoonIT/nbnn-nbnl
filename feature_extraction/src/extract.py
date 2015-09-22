@@ -21,7 +21,6 @@ from h5py import File as HDF5File
 from h5py import special_dtype
 
 from common import get_desc_name
-import DecafExtractor
 import CaffeExtractor
 
 def get_arguments():
