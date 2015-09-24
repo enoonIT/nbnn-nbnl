@@ -49,6 +49,6 @@ function [ params ] = gridJobInterpreter( jobId , dataDir)
     params.supervised = true;
     params.splits = 10;
     params.patchPercent = trainMalus/10.0;
-    fprintf('%d %s - %s -> %s - - - %d\n',jobId, folderName,sourceD,targetD, trainingSamples);
+    fprintf('%d %s - %s -> %s - - - %d: %.2f%%\n',jobId, folderName,sourceD,targetD, trainingSamples, params.patchPercent*100);
 end
 

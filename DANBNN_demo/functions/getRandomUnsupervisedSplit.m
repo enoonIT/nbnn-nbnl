@@ -43,7 +43,7 @@ function [ testLabels testData trainData trainIndexes] = getRandomUnsupervisedSp
             idx = rand(1,size(data,2));
             keep = idx < percent;
             data = data(:,keep);
-            fprintf('For class %d kept %2f of patch samples: from %d to %d\n',c, percent, prevSize, size(data,2));
+            fprintf('For class %d kept %.2f of patch samples: from %d to %d\n',c, percent, prevSize, size(data,2));
         end
         trainData{c} = data;
         if(isSameDomain)
