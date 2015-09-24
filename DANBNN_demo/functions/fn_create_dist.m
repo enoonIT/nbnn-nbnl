@@ -33,7 +33,7 @@ function [DD,dec,decte]=fn_create_dist(S,te)
 uy=unique(S.label);
 
 for c=uy
-
+    fprintf('Building lookup for class %d\n',c);
     ll=find(S.label==c);
     
     ts=cell(numel(ll),1);
@@ -52,7 +52,7 @@ for c=uy
             feat_te=S.feat{j};
             [ii,~]=flann_search(indexALL, feat_te, K, paramsALL(c));
             diff=feat_te-feat_ALL(:,ii);
-            dec{j,c}=double(diff');
+            dec{j,c}=single(diff');
             clear feat_te ii diff
         else %we must remove the image itself from available patches
             lll=ll;
@@ -70,7 +70,7 @@ for c=uy
             feat_te=S.feat{j};
             [ii,~]=flann_search(index, feat_te, K, params(c));
             diff=feat_te-feat_c(:,ii);
-            dec{j,c}=double(diff');
+            dec{j,c}=single(diff');
             
             clear feat_te feat_c
             flann_free_index(index);
@@ -84,7 +84,7 @@ for c=uy
         feat_te=te{j};
         [ii,~]=flann_search(indexALL, feat_te, K, paramsALL(c));
         diff=feat_te-feat_ALL(:,ii);
-        decte{j,c}=double(diff');
+        decte{j,c}=single(diff');
     end
     flann_free_index(indexALL);
 end

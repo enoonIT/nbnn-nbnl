@@ -36,7 +36,16 @@ function [ testLabels testData trainData trainIndexes] = getRandomUnsupervisedSp
         end
         trainId = shuffled(1:nTrainSamples, :);
         trainIndexes{c} = trainId;
-        trainData{c} = loadPatches(trainId, sourceDataset, relu);
+        data = loadPatches(trainId, sourceDataset, relu);
+        if(isfield(params, 'patchPercent'))
+            prevSize = size(data,2);
+            percent = params.patchPercent;
+            idx = rand(1,size(data,2));
+            keep = idx < percent;
+            data = data(:,keep);
+            fprintf('For class %d kept %2f of patch samples: from %d to %d\n',c, percent, prevSize, size(data,2));
+        end
+        trainData{c} = data;
         if(isSameDomain)
             targetDataset = sourceDataset;
             testId = shuffled(nTrainSamples+1:end, :);

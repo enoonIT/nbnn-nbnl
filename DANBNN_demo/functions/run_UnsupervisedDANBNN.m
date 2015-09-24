@@ -46,5 +46,5 @@ function [accuracyIN]=run_UnsupervisedDANBNN(params)
         end
         SM.label = [SM.label ones(1, nSamples)*x];
     end
-    accuracyIN=adaptation_nomem(SM,te',yte');
+    accuracyIN=adaptation(SM,te',yte');
 end

@@ -41,7 +41,7 @@ function doNBNN(data_folder, jobId)
     end
 
     params = gridJobInterpreter(jobId,data_folder);
-    splits = 10;
+    splits = params.splits;
     accuracy = zeros(splits,1);
     for i=1:splits
         fprintf('\nSplit %d:\n',i);
