@@ -141,8 +141,12 @@ class CaffeExtractor:
 
     def get_decaf(self, im):
         self.net.blobs['data'].data[...] = self.transformer.preprocess('data', self.to_rgb(im))
-        out = self.net.forward()
-        features = self.net.blobs['fc7'].data[0]
+        self.net.forward()
+        features7 = self.net.blobs['fc7'].data[0]
+        features6 = self.net.blobs['fc6'].data[0]
+        features = features7
+        if self.layer_name == '67':
+            features = np.hstack([features6, features7])
         return features.reshape(1, features.shape[0])
 
 
