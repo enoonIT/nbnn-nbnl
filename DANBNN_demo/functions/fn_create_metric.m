@@ -57,10 +57,11 @@ end
 
 fprintf(1,'Metric optimization ');
 out={'|' '/' '-' '\'};
-
-for t=1:200  % limited number of rounds for the demo
+iterations = 200;
+for t=1:iterations  % limited number of rounds for the demo
     if mod(t,4)==0
         fprintf(1,'\b%s',out{4});
+        fprintf('Iteration %d of %d\n',t,iterations);
     else
         fprintf(1,'\b%s',out{mod(t,4)});
     end

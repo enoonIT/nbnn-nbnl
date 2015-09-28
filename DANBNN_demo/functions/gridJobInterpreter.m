@@ -1,25 +1,27 @@
 function [ params ] = gridJobInterpreter( jobId , dataDir)
 %GRIDJOBINTERPRETER Summary of this function goes here
-%   we have 9 patch size configuration and 4 source and target datasets -
-%   we have 144 possible jobs
+%   we have 2 patch size configuration and 4 source and target datasets -
+%   and 10 steps for training size, 2 for relu
     % get algorithm parameters
     params.relu = false;
     categories = {'backpack.hdf5' 'headphones.hdf5' 'monitor.hdf5' 'bike.hdf5' 'keyboard.hdf5' 'mouse.hdf5' 'projector.hdf5' 'calculator.hdf5'  'laptop.hdf5' 'mug.hdf5'};
     params.categories = categories;
-%     if(jobId>144)
-%         %params.relu = true;
-%         jobId = jobId - 144;
-%     end
-    jobId = mod(jobId, 144); if(jobId==0)jobId=144;end
-    BLOCK = 48; % 3 patch size * 4 source * 4 target
-    patch_size=[16 32 64];
-    levels=[1 2 3];
+    if(jobId>320)
+        params.relu = true;
+        jobId = jobId - 320;
+    end
+
+    BLOCK = 32; % 2 patch size * 4 source * 4 target
+    patch_conf=[3 32; 2 64];
     datasets = {'office/amazon' 'office/webcam' 'office/dslr' 'caltech10'};
-    level = levels(ceil(jobId/BLOCK));
-    jobMod = mod(jobId, BLOCK);
-    i = find(jobMod==0); jobMod(i)=BLOCK;
+    
+    trainMalus = ceil(jobId / BLOCK); %1-10
+    jobMod = mod(jobId, BLOCK); 
+    i = find(jobMod==0); jobMod(i)=BLOCK; %1-32
     MINIBLOCK = 16; % 4 source and 4 target
-    patch = patch_size(ceil(jobMod/MINIBLOCK));
+    patchSet = ceil(jobMod/MINIBLOCK);
+    patch = patch_conf(patchSet,2);
+    level = patch_conf(patchSet,1);
     jobMod = mod(jobMod, MINIBLOCK);
     i = find(jobMod==0); jobMod(i)=MINIBLOCK;
     MINIBLOCK = 4;
@@ -44,7 +46,9 @@ function [ params ] = gridJobInterpreter( jobId , dataDir)
     params.trainingSamples = trainingSamples;
     params.patchSize = patch;
     params.levels = level;
-    params.supervised = false;
-    fprintf('%d %s - %s -> %s - - - %d\n',jobId, folderName,sourceD,targetD, trainingSamples);
+    params.supervised = true;
+    params.splits = 10;
+    params.patchPercent = trainMalus/10.0;
+    fprintf('%d %s - %s -> %s - - - %d: %.2f%%\n',jobId, folderName,sourceD,targetD, trainingSamples, params.patchPercent*100);
 end
 
