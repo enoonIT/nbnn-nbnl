@@ -17,8 +17,7 @@ function [ testLabels testData trainData trainIndexes] = getRandomUnsupervisedSp
     trainData = cell(classes, 1);
     trainIndexes = cell(classes, 1);
     testLabels = [];
-    testData = cell(1);
-    currentTestSample = 1;
+    testData = cell(0);
     for c=1:classes
         fprintf('Loading test and train for class %d %s\n',c, Source{c}.name);
         sourceDataset = strcat(SourceDataset.path, Source{c}.name); %absolute path to class hdf5 file
@@ -58,23 +57,27 @@ function [ testLabels testData trainData trainIndexes] = getRandomUnsupervisedSp
         nSamples = size(testId,1);
         testDataTmp = loadPatches(testId, targetDataset, relu, params.addPos, params.posScale); % load all the test patches
         firstPatch = 1;
-        start = 1;
-        if(params.supervised) %if supervised, add three images to training data
-            for x=1:3
-                patchesForSample = testId(x,3) - testId(x,2); 
-                trainData{c} = [trainData{c} testDataTmp(:, firstPatch:firstPatch + patchesForSample-1)];
-                firstPatch = firstPatch + patchesForSample;
-                start = x+1;
-            end
-        end
-        for idx=start:nSamples % assign the test patches to the corresponding test cell
+        classTestData = cell(1,nSamples);
+        currentTestSample = 1;
+        for idx=1:nSamples % assign the test patches to the corresponding test cell
             patchesForSample = testId(idx,3) - testId(idx,2); 
-            testData{currentTestSample} = testDataTmp(:, firstPatch:firstPatch + patchesForSample-1);
+            classTestData{currentTestSample} = testDataTmp(:, firstPatch:firstPatch + patchesForSample-1);
             firstPatch = firstPatch + patchesForSample;
             currentTestSample = currentTestSample+1;
         end
+        targetImagesToTransfer = 3;
+        if(params.supervised) %if supervised, add three images to training data //TODO fix the fact that always same images are added
+            shuffledIndexes = randperm(numel(classTestData));
+            toAdd = shuffledIndexes(1:targetImagesToTransfer);
+            for i=toAdd
+                trainData{c} = [trainData{c} classTestData{i}];
+            end
+            classTestData(toAdd) = [];
+            fprintf('Test images %d added to Source\n',toAdd);
+        end
+        testData = [testData classTestData];
         fprintf('Loaded %d test samples\n',currentTestSample-1);
-        testLabels = [testLabels; ones((nSamples-start + 1),1)*c];
+        testLabels = [testLabels; ones(numel(classTestData),1)*c];
     end
     
     
