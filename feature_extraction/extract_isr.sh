@@ -7,26 +7,15 @@
 patch_size=(16 32 64)
 levels=(1 2 3)
 #patch_method=(base extra extra)
-<<<<<<< HEAD
 datasets=(ISR67)
 
-=======
-datasets=(caltech10 office/amazon office/dslr office/webcam)
-COMBINATIONS=$((3*3)) #number of combinations for each dataset
->>>>>>> 30f1df0bf492a68895c610ccdccbd6c35ef7d5f2
 DATA_DIR=$1
 network_data_dir=$DATA_DIR/network/
 i=$2
 PATCH_EXTRACTION_METHOD=extra #${patch_method[i]}
-<<<<<<< HEAD
 DATASET=ISR67
 PSIZE=${patch_size[$((i / 3))]}
 LEVEL=${levels[$((i % 3))]}
-=======
-DATASET=${datasets[$((i/COMBINATIONS))]}
-PSIZE=${patch_size[$(((i % COMBINATIONS)/3))]}
-LEVEL=${levels[$(((i % COMBINATIONS)%3))]}
->>>>>>> 30f1df0bf492a68895c610ccdccbd6c35ef7d5f2
 INPUT_DIR=$DATA_DIR/images/$DATASET
 OUT_NAME=all_${PSIZE}_${LEVEL}_${PATCH_EXTRACTION_METHOD}_hybrid_mean
 OUTPUT_DIR=$DATA_DIR/desc/$DATASET/$OUT_NAME
@@ -38,11 +27,7 @@ IMAGE_DIM=200
 DATA_SPLIT=-1 #-1 means all images, will ignore NUM_TEST and NUM_TRAIN
 NUM_TRAIN=100 #100
 NUM_TEST=100 #100
-<<<<<<< HEAD
 DECAF_LAYER_NAME=67
-=======
-DECAF_LAYER_NAME=fc7_cudanet_out
->>>>>>> 30f1df0bf492a68895c610ccdccbd6c35ef7d5f2
 
 for f in $INPUT_DIR/*; do
   echo $f
