@@ -1,4 +1,4 @@
-function doNBNN(data_folder, jobId)
+function accuracy = doNBNN(data_folder, jobId)
 % This code has been adapted from part of the supplementary material to the ICCV 2013 paper
 % "Frustratingly Easy NBNN Domain Adaptation", T. Tommasi, B. Caputo. 
 %
