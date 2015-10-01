@@ -97,7 +97,7 @@ class ExtractedFeatures:
 class CaffeExtractor:
     def __init__(self, layer_name, model_path, meta_path, data_mean_path):
         self.layer_name = layer_name
-        caffe.set_mode_gpu()
+        caffe.set_mode_cpu()
         self.net = caffe.Net(meta_path, model_path, caffe.TEST)
         self.transforms = [NopTransform()]
         # input preprocessing: 'data' is the name of the input blob == net.inputs[0]
