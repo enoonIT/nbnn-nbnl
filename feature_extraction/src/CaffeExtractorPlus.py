@@ -6,9 +6,6 @@ from itertools import product
 
 import caffe
 
-from common import get_logger, init_logging
-from rotation_helpers import rect_in_rotated_rect
-
 class ImTransform:
     def apply(self, im):
         pass
@@ -25,26 +22,21 @@ class NopTransform(ImTransform):
     def __str__(self):
         return 'nop'
 
-class Rotation(ImTransform):
-    def __init__(self, angle):
-        self.angle = angle
-
+class FlipX(ImTransform):
     def apply(self, im):
-        (w_orig, h_orig) = im.size
-
-        im_ = im.rotate(self.angle, Image.BILINEAR, expand=True)
-
-        (w, h) = im_.size
-        self.orig_im_coords = [w/2 - w_orig/2, h/2 - h_orig/2,
-                               w/2 + w_orig/2, h/2 + h_orig/2]
-        return im_
-
+        return im.transpose(Image.FLIP_LEFT_RIGHT)
     def check_coords(self, x1, y1, x2, y2):
-        return rect_in_rotated_rect([x1,y1,x2,y2], self.orig_im_coords,
-                                    self.angle)
-
+        return True
     def __str__(self):
-        return 'rotation_%d' % self.angle
+        return 'flipX'
+
+class FlipY(ImTransform):
+    def apply(self, im):
+        return im.transpose(Image.FLIP_TOP_BOTTOM)
+    def check_coords(self, x1, y1, x2, y2):
+        return True
+    def __str__(self):
+        return 'flipY'
 
 class Zoom(ImTransform):
     def __init__(self, times):
@@ -74,27 +66,30 @@ class CombinedTransform(ImTransform):
 
 class ExtractedFeatures:
     def __init__(self, num_items, dim):
-        self.patches = np.zeros( (num_items, dim), dtype='float' )
+        self.patches6 = np.zeros( (num_items, dim), dtype='float' )
+        self.patches7 = np.zeros( (num_items, dim), dtype='float' )
         self.pos = np.zeros( (num_items, 2), dtype='float' )
         self.cursor = 0
 
-    def append(self, features, pos):
-        self.patches[self.cursor:self.cursor+features.shape[0], :] = features
-        if (pos.shape[0] == 1) and (features.shape[0]):
+    def append(self, features6, features7, pos):
+        self.patches6[self.cursor:self.cursor+features6.shape[0], :] = features6
+        self.patches7[self.cursor:self.cursor+features7.shape[0], :] = features7
+        if (pos.shape[0] == 1) and (features6.shape[0]):
             # If there's mismatch in number of features and positions,
             # replicating positions
-            pos = np.tile(pos, (features.shape[0], pos.shape[0]) )
+            pos = np.tile(pos, (features6.shape[0], pos.shape[0]) )
 
         self.pos[self.cursor:self.cursor+pos.shape[0], :] = pos
         self.cursor += features.shape[0]
 
     def get(self):
-        self.patches.resize( (self.cursor, self.patches.shape[1]) )
+        self.patches6.resize( (self.cursor, self.patches6.shape[1]) )
+        self.patches7.resize( (self.cursor, self.patches7.shape[1]) )
         self.pos.resize( (self.cursor, self.pos.shape[1]) )
 
-        return (self.patches, self.pos)
+        return (self.patches6, self.patches7, self.pos)
 
-class CaffeExtractor:
+class CaffeExtractorPlus:
     def __init__(self, layer_name, model_path, meta_path, data_mean_path):
         self.layer_name = layer_name
         caffe.set_mode_cpu()
@@ -235,39 +230,6 @@ class CaffeExtractor:
                         count += 1
                         feature_storage.append( self.get_decaf(patch), np.matrix([x, y]) )
             print "At level " + str(l) + " extracted: " + str(count)
-
-    def rand_extract(self, im, feature_storage, check_patch_coords, transform, filename):
-        (w, h) = im.size
-
-        if isinstance(transform, NopTransform): # Hacky....
-            # Extracting features for the whole image
-            feature_storage.append( self.get_decaf(im), np.matrix([0,0]) )
-        if self.levels > 0:
-            patchesXLevel = self.patches_per_image/len(self.patch_sizes)
-            #print "Patches per level: " + str(patchesXLevel)
-        # Extracting features from patches
-        for l in range(self.levels):
-            patchSize = self.patch_sizes[l]
-            maxX = w - patchSize
-            maxY = h - patchSize
-            random_coordinates = np.random.rand(patchesXLevel,2)
-            random_coordinates[:,0] *= maxX
-            random_coordinates[:,1] *= maxY
-            random_coordinates = random_coordinates.astype(int)
-            #print "\n Extracting for level " + str(l) + " " + str(random_coordinates)
-            #print "Image size (" + str(w)+", "+str(h)+") - patch size: " + str(self.patch_sizes[l]) + " available pixels: (" + str(maxX) +", "+str(maxY)+") "
-            for coordinate in random_coordinates:
-                x = coordinate[0]
-                y = coordinate[1]
-                patch_left = x+self.patch_sizes[l]
-                patch_bottom = y+self.patch_sizes[l]
-
-                if (check_patch_coords(x, y, patch_left, patch_bottom) and
-                    patch_left <= w and patch_bottom <= h ):
-                    patch = im.crop( (x, y, patch_left, patch_bottom) )
-                    patch.load()
-
-                    feature_storage.append( self.get_decaf(patch), np.matrix([x, y]) )
 
     def balanced_extract(self, im, feature_storage, check_patch_coords, transform, filename):
         (w, h) = im.size
