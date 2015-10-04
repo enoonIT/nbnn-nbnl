@@ -6,28 +6,25 @@ function [ params ] = gridJobInterpreter( jobId , dataDir)
     params.relu = false;
     categories = {'backpack.hdf5' 'headphones.hdf5' 'monitor.hdf5' 'bike.hdf5' 'keyboard.hdf5' 'mouse.hdf5' 'projector.hdf5' 'calculator.hdf5'  'laptop.hdf5' 'mug.hdf5'};
     params.categories = categories;
-    if(jobId>320)
+    BLOCK = 48; % 3 patch size * 4 source * 4 target
+    patches = [16 32 64];
+    levels = [1 2 3];
+    if(jobId>144)
         params.relu = true;
-        jobId = jobId - 320;
+        jobId = jobId - 144;
     end
-
-    BLOCK = 32; % 2 patch size * 4 source * 4 target
-    patch_conf=[3 32; 2 64];
-    datasets = {'office/amazon' 'office/webcam' 'office/dslr' 'caltech10'};
-    
-    trainMalus = ceil(jobId / BLOCK); %1-10
-    jobMod = mod(jobId, BLOCK); 
-    i = find(jobMod==0); jobMod(i)=BLOCK; %1-32
+    datasets = {'office/amazon' 'office/webcam' 'office/dslr' 'caltech10'};   
+    level = levels(ceil(jobId/BLOCK));
+    jobMod = mod(jobId, BLOCK);
+    jobMod(jobMod==0)=BLOCK;
     MINIBLOCK = 16; % 4 source and 4 target
-    patchSet = ceil(jobMod/MINIBLOCK);
-    patch = patch_conf(patchSet,2);
-    level = patch_conf(patchSet,1);
+    patch = patches(ceil(jobMod/MINIBLOCK));
     jobMod = mod(jobMod, MINIBLOCK);
-    i = find(jobMod==0); jobMod(i)=MINIBLOCK;
+    jobMod(jobMod==0)=MINIBLOCK;
     MINIBLOCK = 4;
     sourceD = datasets{ceil(jobMod/MINIBLOCK)};
     jobMod = mod(jobMod, MINIBLOCK);
-    i = find(jobMod==0); jobMod(i)=MINIBLOCK;
+    jobMod(jobMod==0)=MINIBLOCK;
     targetD = datasets{jobMod};
     % prepare params object
     folderName = strcat('/all_',num2str(patch),'_',num2str(level),'_extra_hybrid_mean/');
@@ -48,9 +45,9 @@ function [ params ] = gridJobInterpreter( jobId , dataDir)
     params.levels = level;
     params.supervised = true;
     params.splits = 10;
-    params.patchPercent = trainMalus/10.0;
+    %params.patchPercent = 0;
     params.addPos = false;
     params.posScale = 0.1;
-    fprintf('%d %s - %s -> %s - - - %d: %.2f%%\n',jobId, folderName,sourceD,targetD, trainingSamples, params.patchPercent*100);
+    fprintf('%d %s - %s -> %s - - - %d: (Relu %s) %.2f%%\n',jobId, folderName,sourceD,targetD, trainingSamples, char(params.relu+48), 100);%params.patchPercent*100);
 end
 

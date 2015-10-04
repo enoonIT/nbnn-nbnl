@@ -159,9 +159,9 @@ def extract_decaf(input_dir, output_dir, network_data_dir, files, num_patches, p
     log = get_logger()
 
     #ex = DecafExtractor.DecafExtractor(layer_name)
-    ex = CaffeExtractor.CaffeExtractor(layer_name, 
-				       network_data_dir + 'hybridCNN_iter_700000_upgraded.caffemodel', 
-				       network_data_dir + 'hybridCNN_deploy_no_relu_upgraded.prototxt', 
+    ex = CaffeExtractor.CaffeExtractor(layer_name,
+				       network_data_dir + 'hybridCNN_iter_700000_upgraded.caffemodel',
+				       network_data_dir + 'hybridCNN_deploy_no_relu_upgraded.prototxt',
 				       network_data_dir + 'hybrid_mean.npy')
     ex.set_parameters(patch_size, num_patches, levels, image_dim, decaf_oversample, extraction_method)
 

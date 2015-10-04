@@ -3,7 +3,7 @@ import Image
 from os.path import basename
 import numpy as np
 from itertools import product
-
+import ExtractedFeatures
 import caffe
 
 class ImTransform:
@@ -64,31 +64,6 @@ class CombinedTransform(ImTransform):
     def __str__(self):
         return '%s_>_%s' % (self.xform_A, self.xform_B)
 
-class ExtractedFeatures:
-    def __init__(self, num_items, dim):
-        self.patches6 = np.zeros( (num_items, dim), dtype='float' )
-        self.patches7 = np.zeros( (num_items, dim), dtype='float' )
-        self.pos = np.zeros( (num_items, 2), dtype='float' )
-        self.cursor = 0
-
-    def append(self, features6, features7, pos):
-        self.patches6[self.cursor:self.cursor+features6.shape[0], :] = features6
-        self.patches7[self.cursor:self.cursor+features7.shape[0], :] = features7
-        if (pos.shape[0] == 1) and (features6.shape[0]):
-            # If there's mismatch in number of features and positions,
-            # replicating positions
-            pos = np.tile(pos, (features6.shape[0], pos.shape[0]) )
-
-        self.pos[self.cursor:self.cursor+pos.shape[0], :] = pos
-        self.cursor += features.shape[0]
-
-    def get(self):
-        self.patches6.resize( (self.cursor, self.patches6.shape[1]) )
-        self.patches7.resize( (self.cursor, self.patches7.shape[1]) )
-        self.pos.resize( (self.cursor, self.pos.shape[1]) )
-
-        return (self.patches6, self.patches7, self.pos)
-
 class CaffeExtractorPlus:
     def __init__(self, layer_name, model_path, meta_path, data_mean_path):
         self.layer_name = layer_name
@@ -109,9 +84,9 @@ class CaffeExtractorPlus:
         self.levels = levels
         self.image_dim = image_dim
         self.decaf_oversample = decaf_oversample
-	self.extraction_method=self.extract
-	if(extraction_method=="extra"):
-	  self.extraction_method=self.balanced_extract
+        self.extraction_method=self.extract
+        if(extraction_method=="extra"):
+            self.extraction_method=self.balanced_extract
         self.patch_sizes = map(int, self.patch_size * 2**np.arange(0,levels,1.0))
         print self.patch_sizes
 
@@ -134,8 +109,8 @@ class CaffeExtractorPlus:
 
         return ret
 
-    def get_decaf(self, im):
-        self.net.blobs['data'].data[...] = self.transformer.preprocess('data', self.to_rgb(im))
+    def get_decaf(self, patch):
+        self.net.blobs['data'].data[...] = patch
         self.net.forward()
         features7 = self.net.blobs['fc7'].data[0]
         features6 = self.net.blobs['fc6'].data[0]
@@ -197,40 +172,6 @@ class CaffeExtractorPlus:
         log.info('Done. Extracted: %d.', feature_storage.cursor)
         return feature_storage
 
-
-    def extract(self, im, feature_storage, check_patch_coords, transform, filename):
-        (w, h) = im.size
-
-        # Calculating patch step
-        if self.levels > 0:
-            patch_step = int( (w*h * len(self.patch_sizes) / self.patches_per_image)**0.5 )
-            w_steps = np.arange(0, w, patch_step)
-            h_steps = np.arange(0, h, patch_step)
-            (xx, yy) = np.meshgrid(w_steps, h_steps)
-
-        if isinstance(transform, NopTransform): # Hacky....
-            # Extracting features for the whole image
-            feature_storage.append( self.get_decaf(im), np.matrix([0,0]) )
-
-        # Extracting features from patches
-        for l in range(self.levels):
-            #print "Level : " + str(l)
-            count = 0
-            for i in range(xx.shape[0]):
-                for j in range(xx.shape[1]):
-                    x = xx[i,j]
-                    y = yy[i,j]
-                    patch_left = x+self.patch_sizes[l]
-                    patch_bottom = y+self.patch_sizes[l]
-
-                    if (check_patch_coords(x, y, patch_left, patch_bottom) and
-                        patch_left <= w and patch_bottom <= h ):
-                        patch = im.crop( (x, y, patch_left, patch_bottom) )
-                        patch.load()
-                        count += 1
-                        feature_storage.append( self.get_decaf(patch), np.matrix([x, y]) )
-            print "At level " + str(l) + " extracted: " + str(count)
-
     def balanced_extract(self, im, feature_storage, check_patch_coords, transform, filename):
         (w, h) = im.size
 
@@ -245,6 +186,7 @@ class CaffeExtractorPlus:
         expected = 0
         skipped = 0
         # Extracting features from patches
+        preprocessedPatches = np.empty([self.BATCH_SIZE, 3, 227, 227)
         for l in range(self.levels):
             countLevel = 0
             _w = w -self.patch_sizes[l]
@@ -256,6 +198,7 @@ class CaffeExtractorPlus:
             h_steps = np.arange(0, _h+1, patch_step)
             print "Image size (" + str(w)+", "+str(h)+") - patch size: " + str(self.patch_sizes[l]) + " patch step: " + str(patch_step) + " available pixels: (" + str(_w) +", "+str(_h)+") " \
                     "\n\twsteps: " + str(w_steps) + " \n\th_steps: " + str(h_steps)
+            k=0;
             for i in range(len(w_steps)):
                 for j in range(len(h_steps)):
                     expected += 1
@@ -269,10 +212,11 @@ class CaffeExtractorPlus:
                         patch = im.crop( (x, y, patch_left, patch_bottom) )
                         patch.load()
                         countLevel +=1
-                        feature_storage.append( self.get_decaf(patch), np.matrix([x, y]) )
+                        preprocessedPatches[k,...]=self.transformer.preprocess('data', self.to_rgb(patch))
                     else:
                         skipped += 1
             print "got " + str(countLevel) + " for level " + str(l)
+        feature_storage.append(preprocessedPatches, ...)
         print "Expected " + str(expected) + " skipped: " + str(skipped)
 
 
