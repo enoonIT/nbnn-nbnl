@@ -91,6 +91,11 @@ class CaffeExtractorPlus:
 
     def add_transform(self, transform):
         self.transforms.append(transform)
+    def enable_data_augmentation(self):
+        self.transform.append(FlipX())
+        self.transform.append(FlipY())
+        self.transform.append(CombinedTransform(FlipX(), FlipY()))
+        self.transform.append(CombinedTransform(FlipY(), FlipX()))
 
     def get_number_of_features_per_image(self):
         return len(self.transforms)

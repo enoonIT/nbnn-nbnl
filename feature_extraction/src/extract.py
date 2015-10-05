@@ -175,8 +175,8 @@ def extract_decaf(input_dir, output_dir, network_data_dir, files, num_patches, p
 
     ds = Dataset(input_dir, output_dir, len(files),
                  num_patches * ex.get_number_of_features_per_image(),
-                 'DECAF', patch_dim=ex.get_descriptor_size(),
-                 patch_type='float', pos_type='uint16')
+                 'CAFFE', patch_dim=ex.get_descriptor_size(),
+                 patch_type='float32', pos_type='uint16')
 
     for f in files:
         if f in ds:
