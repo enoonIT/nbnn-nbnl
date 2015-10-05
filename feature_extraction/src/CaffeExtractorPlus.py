@@ -4,7 +4,9 @@ from os.path import basename
 import numpy as np
 from itertools import product
 import ExtractedFeatures
-import caffe
+import CaffeExtractor
+from common import get_logger, init_logging
+import caffe, time
 
 class ImTransform:
     def apply(self, im):
@@ -65,9 +67,8 @@ class CombinedTransform(ImTransform):
         return '%s_>_%s' % (self.xform_A, self.xform_B)
 
 class CaffeExtractorPlus:
-    def __init__(self, layer_name, model_path, meta_path, data_mean_path):
-        self.layer_name = layer_name
-        caffe.set_mode_cpu()
+    def __init__(self, model_path, meta_path, data_mean_path):
+        caffe.set_mode_gpu()
         self.net = caffe.Net(meta_path, model_path, caffe.TEST)
         self.transforms = [NopTransform()]
         # input preprocessing: 'data' is the name of the input blob == net.inputs[0]
@@ -76,28 +77,27 @@ class CaffeExtractorPlus:
         self.transformer.set_mean('data', np.load(data_mean_path).mean(1).mean(1)) # mean pixel
         self.transformer.set_raw_scale('data', 255)  # the reference model operates on images in [0,255] range instead of [0,1]
         self.transformer.set_channel_swap('data', (2,1,0))  # the reference model has channels in BGR order instead of RGB
-        self.net.blobs['data'].reshape(1,3,227,227)
 
-    def set_parameters(self, patch_size, patches_per_image, levels, image_dim, decaf_oversample, extraction_method):
+    def set_parameters(self, patch_size, patches_per_image, levels, image_dim, batch_size):
         self.patch_size = patch_size
         self.patches_per_image = patches_per_image
         self.levels = levels
         self.image_dim = image_dim
-        self.decaf_oversample = decaf_oversample
-        self.extraction_method=self.extract
-        if(extraction_method=="extra"):
-            self.extraction_method=self.balanced_extract
+        self.extraction_method=self.balanced_extract
         self.patch_sizes = map(int, self.patch_size * 2**np.arange(0,levels,1.0))
+        self.batch_size = batch_size;
+        self.net.blobs['data'].reshape(self.batch_size,3,227,227)
         print self.patch_sizes
 
     def add_transform(self, transform):
         self.transforms.append(transform)
 
+    def get_number_of_features_per_image(self):
+        return len(self.transforms)
+
     def get_descriptor_size(self):
-        if self.layer_name in ['67_relu', '67']:
-            return 8192
-        else:
-            return 4096
+        return 4096
+
     def to_rgb(self, _im):
         im = np.array(_im)
         if(im.ndim==3):
@@ -106,25 +106,23 @@ class CaffeExtractorPlus:
             w, h = im.shape
             ret = np.empty((w, h, 3), dtype=np.float32)
             ret[:, :, 2] =  ret[:, :, 1] =  ret[:, :, 0] = im/255.0
-
         return ret
 
-    def get_decaf(self, patch):
-        self.net.blobs['data'].data[...] = patch
-        self.net.forward()
-        features7 = self.net.blobs['fc7'].data[0]
-        features6 = self.net.blobs['fc6'].data[0]
-        features = features7
-        if self.layer_name == '67':
-            features = np.hstack([features6, features7])
-        return features.reshape(1, features.shape[0])
-
-
-    def get_number_of_features_per_image(self):
-        if self.decaf_oversample:
-            return 10*len(self.transforms)
-        else:
-            return len(self.transforms)
+    def load_caffe_patches(self, preprocessed_patches, positions, extracted_features):
+        nPatches = preprocessed_patches.shape[0]
+        start = 0
+        print "Will now extract patches, we have " + str(preprocessed_patches.shape) + " patches"
+        while nPatches > 0:
+            extractedPatches = min(nPatches, self.batch_size)
+            print "Extracting " + str(extractedPatches)
+            self.net.blobs['data'].data[0:extractedPatches] = preprocessed_patches[start:start+extractedPatches]
+            self.net.forward()
+            features7 = self.net.blobs['fc7'].data[0:extractedPatches]
+            features6 = self.net.blobs['fc6'].data[0:extractedPatches]
+            extracted_features.append(features6, features7, positions[start:start+extractedPatches])
+            #prepare for next batch
+            nPatches -= self.batch_size
+            start += self.batch_size
 
     def extract_image(self, filename):
         """ This method extracts 4096-dimensional DeCAF features from
@@ -158,7 +156,7 @@ class CaffeExtractorPlus:
         estimated_feature_num = self.patches_per_image * self.get_number_of_features_per_image()
 
         # Provisioning space for patches and locations
-        feature_storage = ExtractedFeatures(estimated_feature_num, self.get_descriptor_size())
+        feature_storage = ExtractedFeatures.ExtractedFeatures(estimated_feature_num, self.get_descriptor_size())
 
         log.info('Extracting up to %d patches at %d levels from "%s"...',
                  self.patches_per_image * self.get_number_of_features_per_image(),
@@ -174,19 +172,22 @@ class CaffeExtractorPlus:
 
     def balanced_extract(self, im, feature_storage, check_patch_coords, transform, filename):
         (w, h) = im.size
-
+        # Extracting features from patches
+        preprocessedPatches = np.empty([self.patches_per_image, 3, 227, 227], dtype="float32")
+        positions = np.zeros((self.patches_per_image,2), dtype="uint16")
         # Calculating patch step
         if self.levels > 0:
             patchesXLevel = self.patches_per_image/len(self.patch_sizes)
             print "Patches per level: " + str(patchesXLevel)
-
-        if isinstance(transform, NopTransform): # Hacky....
+        k=0
+        if isinstance(transform, NopTransform): # Hacky.... #TODO why only for NopTransform?
             # Extracting features for the whole image
-            feature_storage.append( self.get_decaf(im), np.matrix([0,0]) )
+            preprocessedPatches[k,...]=self.transformer.preprocess('data', self.to_rgb(im))
+            positions[k,...]= np.matrix([0,0])
+            k+=1
         expected = 0
         skipped = 0
-        # Extracting features from patches
-        preprocessedPatches = np.empty([self.BATCH_SIZE, 3, 227, 227)
+
         for l in range(self.levels):
             countLevel = 0
             _w = w -self.patch_sizes[l]
@@ -198,7 +199,6 @@ class CaffeExtractorPlus:
             h_steps = np.arange(0, _h+1, patch_step)
             print "Image size (" + str(w)+", "+str(h)+") - patch size: " + str(self.patch_sizes[l]) + " patch step: " + str(patch_step) + " available pixels: (" + str(_w) +", "+str(_h)+") " \
                     "\n\twsteps: " + str(w_steps) + " \n\th_steps: " + str(h_steps)
-            k=0;
             for i in range(len(w_steps)):
                 for j in range(len(h_steps)):
                     expected += 1
@@ -213,44 +213,64 @@ class CaffeExtractorPlus:
                         patch.load()
                         countLevel +=1
                         preprocessedPatches[k,...]=self.transformer.preprocess('data', self.to_rgb(patch))
+                        positions[k,...] = np.matrix([x, y])
+                        k+=1
                     else:
                         skipped += 1
             print "got " + str(countLevel) + " for level " + str(l)
-        feature_storage.append(preprocessedPatches, ...)
+        self.load_caffe_patches(preprocessedPatches[0:k], positions[0:k] ,feature_storage)
         print "Expected " + str(expected) + " skipped: " + str(skipped)
 
+def test_extraction(filename):
+    cep = CaffeExtractorPlus("/home/fmcarlucci/data/network/hybridCNN_iter_700000_upgraded.caffemodel",
+    "/home/fmcarlucci/data/network/hybridCNN_deploy_no_relu_upgraded.prototxt","/home/fmcarlucci/data/network/hybrid_mean.npy")
+    cep.set_parameters(32,100,3,200, 20)
+    cep.add_transform(FlipX())
+    cep.add_transform(FlipY())
+    cep.add_transform(CombinedTransform(FlipX(), FlipY()))
+    return cep.extract_image(filename)
 
-def get_oversampled_demo_ex():
-    ex = CaffeExtractor()
-    ex.set_parameters(64, 100, 3, 256)
+def test_extraction_speed(filename):
+    cep = CaffeExtractorPlus("/home/fmcarlucci/data/network/hybridCNN_iter_700000_upgraded.caffemodel",
+    "/home/fmcarlucci/data/network/hybridCNN_deploy_no_relu_upgraded.prototxt","/home/fmcarlucci/data/network/hybrid_mean.npy")
+    timeResults = np.zeros((20));
+    for k in range(0,20):
+        cep.set_parameters(16,100,1,200, k*5+1)
+        start = time.clock()
+        cep.extract_image(filename)
+        cep.extract_image(filename)
+        cep.extract_image(filename)
+        cep.extract_image(filename)
+        end = time.clock()
+        timeResults[k]= end-start;
+    return timeResults
 
-    xforms_A = [Zoom(1), Zoom(2)]
-    xforms_B = [Rotation(a) for a in range(-120,0,30) + range(30,150,30)]
-    xforms = map(lambda (x,y): CombinedTransform(x,y), product(xforms_A, xforms_B))
-    ex.transforms.extend(xforms)
-
-    return ex
-
-def get_full_image_demo_ex():
-    ex = CaffeExtractor()
-    ex.set_parameters(64, 1, 0, 256)
-
-    return ex
-
-def get_3_levels_demo_ex():
-    ex = CaffeExtractor()
-    ex.set_parameters(64, 100, 3, 256)
-
-    return ex
+def comparison(filename):
+    model = "/home/fmcarlucci/data/network/hybridCNN_iter_700000_upgraded.caffemodel"
+    proto = "/home/fmcarlucci/data/network/hybridCNN_deploy_no_relu_upgraded.prototxt"
+    meanPy = "/home/fmcarlucci/data/network/hybrid_mean.npy"
+    patch = 16
+    levels = 3
+    patchesPerImage=100
+    imageW = 200
+    batchSize = 16
+    cep = CaffeExtractorPlus(model, proto, meanPy)
+    ce = CaffeExtractor.CaffeExtractor("67", model, proto, meanPy)
+    ce.set_parameters(patch, patchesPerImage, levels, imageW, False, "extra")
+    cep.set_parameters(patch,patchesPerImage,levels,imageW, batchSize)
+    start = time.clock()
+    for x in range(0,10):
+        patches = cep.extract_image(filename)
+    end = time.clock()
+    batch_time = end-start
+    start = time.clock()
+    for x in range(0,10):
+        patches2 = ce.extract_image(filename)
+    end = time.clock()
+    print "Batch version took " + str(batch_time)
+    print "Base version took " + str(end-start)
+    return [patches, patches2]
 
 if __name__ == '__main__':
-    testImage = "/home/enoon/nbnn_cnn_dist/data/images/scene15/bedroom/image_0020.jpg"
-    ex1 = CaffeExtractor("")
-    ex1.set_parameters(32,100,1,200)
-    ex2 = CaffeExtractor("")
-    ex2.set_parameters(32,100,3,200)
-    #result1 = ex1.extract_image(testImage)
-    result2 = ex2.extract_image(testImage)
-
-    #print result1.cursor
-    print result2.cursor
+    testImage = "/home/fmcarlucci/nbnn-nbnl/feature_extraction/src/test.jpg"
+    patches = test_extraction(testImage)
