@@ -21,7 +21,7 @@ from h5py import File as HDF5File
 from h5py import special_dtype
 
 from common import get_desc_name
-import CaffeExtractor
+import CaffeExtractorPlus
 
 def get_arguments():
     log = get_logger()
@@ -49,9 +49,9 @@ def get_arguments():
     parser.add_argument("--split", dest="split", type=int,
                         help="Split to extract.")
     parser.add_argument("--oversample", dest="oversample", action='store_true',
-                        help="Add patch rotations.")
+                        help="Add patch flipping.")
     parser.add_argument("--decaf-oversample", dest="decaf_oversample", action='store_true',
-                        help="DECAF oversampling. Flip/corner etc.")
+                        help="Caffe oversampling. Flip X, Y, etc.")
     parser.add_argument("--layer-name", dest="layer_name",
                         help="Decaf layer name.")
     parser.add_argument("--network-data-dir", dest="network_data_dir",
@@ -108,7 +108,8 @@ class Dataset:
 
             self.log.warn('File "%s" already exists. Trying to continue.', output_filename)
             self.hfile = HDF5File(output_filename, 'a', compression='gzip', compression_opts=9, fillvalue=0.0)
-            self.patches = self.hfile['patches']
+            self.patches6 = self.hfile['patches6']
+            self.patches7 = self.hfile['patches7']
             self.positions = self.hfile['positions']
             self.image_index = self.hfile['image_index']
             self.keys = self.hfile['keys']
@@ -119,14 +120,15 @@ class Dataset:
             dt = special_dtype(vlen=bytes)
             patches += 10 #for safety
             self.hfile = HDF5File(output_filename, 'w', compression='gzip', compression_opts=9, fillvalue=0.0)
-            self.patches = self.hfile.create_dataset('patches', (num_files * patches, patch_dim), dtype=patch_type, chunks=True)
+            self.patches6 = self.hfile.create_dataset('patches6', (num_files * patches, patch_dim), dtype=patch_type, chunks=True)
+            self.patches7 = self.hfile.create_dataset('patches7', (num_files * patches, patch_dim), dtype=patch_type, chunks=True)
             self.positions = self.hfile.create_dataset('positions', (num_files * patches, 2), dtype=pos_type, chunks=True)
             self.image_index = self.hfile.create_dataset('image_index', (num_files, 2), dtype='uint64') # Start, End positions of an image
             self.keys = self.hfile.create_dataset('keys', (num_files, ), dtype=dt)
             self.key_set = set()
-            self.patches.attrs['cursor'] = 0
-            self.patches.attrs['feature_type'] = feature_type
-            self.patches.attrs['n_patches'] = patches
+            self.patches6.attrs['cursor'] = 0
+            self.patches6.attrs['feature_type'] = feature_type
+            self.patches6.attrs['n_patches'] = patches
 
         self.output_filename = output_filename
 
@@ -136,41 +138,39 @@ class Dataset:
     def __contains__(self, key):
         return key in self.key_set
 
-    def append(self, key, patches, pos):
-        num_patches = patches.shape[0]
+    def append(self, key, patches6, patches7, pos):
+        num_patches = patches6.shape[0]
+        assert patches6.shape[0]==patches7.shape[0]
         num_keys = len(self.key_set)
         assert(num_patches == pos.shape[0])
 
-        start = self.patches.attrs['cursor']
-        end = self.patches.attrs['cursor'] + num_patches
+        start = self.patches6.attrs['cursor']
+        end = self.patches6.attrs['cursor'] + num_patches
 
-        self.patches[start:end, :] = patches
+        self.patches6[start:end, :] = patches6
+        self.patches7[start:end, :] = patches7
         self.positions[start:end, :] = pos
         self.image_index[num_keys, 0] = start
         self.image_index[num_keys, 1] = end
         self.keys[num_keys] = key
         self.key_set.add(key)
-        self.patches.attrs['cursor'] += num_patches
+        self.patches6.attrs['cursor'] += num_patches
 
     def close(self):
         self.hfile.close()
 
 def extract_decaf(input_dir, output_dir, network_data_dir, files, num_patches, patch_size, image_dim, levels, oversample, layer_name, decaf_oversample, extraction_method):
     log = get_logger()
-
+    BATCH_SIZE = 16
     #ex = DecafExtractor.DecafExtractor(layer_name)
-    ex = CaffeExtractor.CaffeExtractor(layer_name,
-				       network_data_dir + 'hybridCNN_iter_700000_upgraded.caffemodel',
-				       network_data_dir + 'hybridCNN_deploy_no_relu_upgraded.prototxt',
-				       network_data_dir + 'hybrid_mean.npy')
-    ex.set_parameters(patch_size, num_patches, levels, image_dim, decaf_oversample, extraction_method)
-
+    ex = CaffeExtractorPlus.CaffeExtractorPlus(
+                       network_data_dir + 'hybridCNN_iter_700000_upgraded.caffemodel',
+                       network_data_dir + 'hybridCNN_deploy_no_relu_upgraded.prototxt',
+                       network_data_dir + 'hybrid_mean.npy')
+    ex.set_parameters(patch_size, num_patches, levels, image_dim, BATCH_SIZE)
     if oversample:
-        log.info('Extracting with zooming & rotations!')
-        xforms_A = [DecafExtractor.Zoom(1), DecafExtractor.Zoom(2)]
-        xforms_B = [DecafExtractor.Rotation(a) for a in range(-120,0,30) + range(30,150,30)]
-        xforms = map(lambda (x,y): DecafExtractor.CombinedTransform(x,y), product(xforms_A, xforms_B))
-        ex.transforms.extend(xforms)
+        log.info('Extracting with mirror combinations (X,Y,X-Y,Y-X')
+        ex.enable_data_augmentation()
 
 
     ds = Dataset(input_dir, output_dir, len(files),
@@ -186,9 +186,9 @@ def extract_decaf(input_dir, output_dir, network_data_dir, files, num_patches, p
         features = ex.extract_image(f)
 
         if features.cursor > 0:
-            (patches, positions) = features.get()
+            (patches6, patches7, positions) = features.get()
 
-            ds.append(f, patches, positions)
+            ds.append(f, patches6, patches7, positions)
 
 
 if __name__ == '__main__':

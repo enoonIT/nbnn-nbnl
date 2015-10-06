@@ -35,7 +35,7 @@ function [ testLabels testData trainData trainIndexes] = getRandomUnsupervisedSp
         end
         trainId = shuffled(1:nTrainSamples, :);
         trainIndexes{c} = trainId;
-        data = loadPatches(trainId, sourceDataset, relu, params.addPos, params.posScale);
+        data = loadNewPatches(trainId, sourceDataset, relu, params.addPos, params.posScale);
         if(isfield(params, 'patchPercent'))
             prevSize = size(data,2);
             percent = params.patchPercent;
@@ -55,7 +55,7 @@ function [ testLabels testData trainData trainIndexes] = getRandomUnsupervisedSp
         end
         % load test data
         nSamples = size(testId,1);
-        testDataTmp = loadPatches(testId, targetDataset, relu, params.addPos, params.posScale); % load all the test patches
+        testDataTmp = loadNewPatches(testId, targetDataset, relu, params.addPos, params.posScale); % load all the test patches
         firstPatch = 1;
         classTestData = cell(1,nSamples);
         currentTestSample = 1;
