@@ -17,7 +17,7 @@ DATASET=${datasets[$((i/COMBINATIONS))]}
 PSIZE=${patch_size[$(((i % COMBINATIONS)/3))]}
 LEVEL=${levels[$(((i % COMBINATIONS)%3))]}
 INPUT_DIR=$DATA_DIR/images/$DATASET
-OUT_NAME=all_${PSIZE}_${LEVEL}_${PATCH_EXTRACTION_METHOD}_hybrid_mean
+OUT_NAME=all_${PSIZE}_${LEVEL}_${PATCH_EXTRACTION_METHOD}_hybrid_mean_aug
 OUTPUT_DIR=$DATA_DIR/desc/$DATASET/$OUT_NAME
 
 echo $OUTPUT_DIR
@@ -37,5 +37,5 @@ python ./src/extract.py --input-dir $f --output-dir $OUTPUT_DIR \
        --levels $LEVEL --split $DATA_SPLIT \
        --num-train-images $NUM_TRAIN --num-test-images $NUM_TEST \
        --layer-name $DECAF_LAYER_NAME --network-data-dir $network_data_dir \
-       --patch-method $PATCH_EXTRACTION_METHOD
+       --patch-method $PATCH_EXTRACTION_METHOD --oversample
 done

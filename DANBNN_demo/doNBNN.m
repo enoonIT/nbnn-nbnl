@@ -34,7 +34,7 @@ function accuracy = doNBNN(data_folder, jobId)
     if ~exist(output_folder, 'dir')
       mkdir(output_folder);
     end
-    outName = strcat(output_folder,'job_NBNN_RandomPart_SemiSuper2_',num2str(jobId),'.mat')
+    outName = strcat(output_folder,'job_NBNN_aug_base_unsuper_',num2str(jobId),'.mat')
     if exist(outName,'file')
         disp('Job already performed - skipping');
         return

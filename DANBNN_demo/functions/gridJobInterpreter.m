@@ -27,7 +27,7 @@ function [ params ] = gridJobInterpreter( jobId , dataDir)
     jobMod(jobMod==0)=MINIBLOCK;
     targetD = datasets{jobMod};
     % prepare params object
-    folderName = strcat('/all_',num2str(patch),'_',num2str(level),'_extra_hybrid_mean/');
+    folderName = strcat('/all_',num2str(patch),'_',num2str(level),'_extra_hybrid_mean_aug/');
     S.path = strcat(dataDir,'/desc/',sourceD,folderName);
     S.dataset = sourceD;
     S.indexes = getImageIDs(S.path, categories);
@@ -43,7 +43,7 @@ function [ params ] = gridJobInterpreter( jobId , dataDir)
     params.trainingSamples = trainingSamples;
     params.patchSize = patch;
     params.levels = level;
-    params.supervised = true;
+    params.supervised = false;
     params.splits = 10;
     %params.patchPercent = 0;
     params.addPos = false;
