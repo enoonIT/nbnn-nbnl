@@ -37,9 +37,9 @@ DECAF_LAYER_NAME=fc7_cudanet_out
 for f in $INPUT_DIR/*; do
   echo $f
 python ./src/extract.py --input-dir $f --output-dir $OUTPUT_DIR \
-       --patches $PATCHES_PER_IMAGE --patch-size $PATCH_SIZE \
+       --patches $PATCHES_PER_IMAGE --patch-size $PSIZE \
        --image-dim $IMAGE_DIM --descriptor DECAF \
-       --levels $LEVELS --split $DATA_SPLIT \
+       --levels $LEVEL --split $DATA_SPLIT \
        --num-train-images $NUM_TRAIN --num-test-images $NUM_TEST \
        --layer-name $DECAF_LAYER_NAME --network-data-dir $network_data_dir \
        --patch-method $PATCH_EXTRACTION_METHOD
