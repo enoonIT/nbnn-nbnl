@@ -107,7 +107,7 @@ class Dataset:
             self.mode = 'appending'
 
             self.log.warn('File "%s" already exists. Trying to continue.', output_filename)
-            self.hfile = HDF5File(output_filename, 'a', compression='gzip', compression_opts=9, fillvalue=0.0)
+            self.hfile = HDF5File(output_filename, 'a', compression='gzip', fillvalue=0.0)
             self.patches6 = self.hfile['patches6']
             self.patches7 = self.hfile['patches7']
             self.positions = self.hfile['positions']

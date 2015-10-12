@@ -2,3 +2,4 @@
 *.m~
 *.asv
 *.out
+CMakeFiles/
