@@ -325,7 +325,6 @@ if __name__ == '__main__':
     init_logging()
 
     args = get_arguments()
-    global PATCH_TYPE
     PATCH_TYPE = args.patch_name
     if args.cmd == 'select-random':
         select_random_support(args.train_dir, args.support, args.num_train_images,
