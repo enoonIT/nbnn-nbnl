@@ -4,7 +4,7 @@
 # This code tests NBNN classifier on a scenes15 dataset.
 #
 
-DATA_DIR=/mnt/WorkingDrive/data/desc/sport8/all_32_3_extra_hybrid_mean_dense/splits
+DATA_DIR=$1
 NUM_TRAIN=70
 NUM_TEST=60
 ALPHA=100
