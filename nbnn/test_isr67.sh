@@ -4,7 +4,7 @@
 # This code tests NBNN classifier on a scenes15 dataset.
 #
 
-DATA_DIR=/media/fmcarlucci/BackupA/data/desc/ISR67/all_32_3_extra_hybrid_mean/splits
+DATA_DIR=/media/fmcarlucci/BackupA/data/desc/ISR67/all_16_3_extra_hybrid_mean/splits
 NUM_TRAIN=80
 NUM_TEST=20
 ALPHA=100

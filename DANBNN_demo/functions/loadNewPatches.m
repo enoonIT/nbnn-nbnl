@@ -1,7 +1,7 @@
 function selectedPatches = loadNewPatches(imageIds, dataset, relu, addPos, posScale)
 %   selectedPatches is featDescriptor x numPatches
     patchIndexes = imageIds(:,2:3);
-    patches = h5read(dataset,'/patches');
+    patches = h5read(dataset,'/patches7');
     if(addPos)
         positions = h5read(dataset, '/positions');
         patches = [patches; (positions*posScale)];
