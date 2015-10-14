@@ -1,3 +1,3 @@
 function exec_doNBNL(data_folder, jobId)
-    grid_doNBNL;
+    start=tic, grid_doNBNL, toc(start);
 end

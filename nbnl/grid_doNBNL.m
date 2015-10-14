@@ -12,19 +12,19 @@ output_folder = strcat(data_folder,'/output/');
 if ~exist(output_folder, 'dir')
   mkdir(output_folder);
 end
-outName = strcat(output_folder,'job_LAMBDATESTING_',num2str(jobId),'.mat')
+outName = strcat(output_folder,'job_NBNLSports_',num2str(jobId),'.mat')
 if exist(outName,'file')
     disp('Job already performed - skipping');
     return
 end
-[algP lambda, input_folder, split] = gridJobInterpreter(jobId);
-dataset_dir = strcat(data_folder, '/desc/scene15/',input_folder, '/relu/')
+[algM, dataset_dir, split ] = gridJobInterpreter(jobId, data_folder);
+algP=1.5;
 
 algo = ML3();
 algo.m = algM;
 algo.maxCCCPIter = algIter;
 algo.p = algP;
-algo.lambda = lambda;%2e-2
+% algo.lambda = lambda;%2e-2
 
     
 % get training patches
@@ -48,4 +48,4 @@ splitAccuracy = accuracy
 
 fprintf('Training time: %f hours\nTraining accuracy: %f\n',trainingTime/3600, trainingAccuracy);
 fprintf('Testing time %f\nTesting accuracy %f\n',mean(testingTime), testingAccuracy);
-save(outName,'lambda','input_folder','splitAccuracy','trainingAccuracy','testingAccuracy','trainingTime','testingTime','split','algP');
+save(outName,'algM','dataset_dir','splitAccuracy','trainingAccuracy','testingAccuracy','trainingTime','testingTime','split','algP','confusion');
