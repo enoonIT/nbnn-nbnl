@@ -1,5 +1,5 @@
 
-import Image
+from PIL import Image
 from os.path import basename
 import numpy as np
 from itertools import product

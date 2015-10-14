@@ -3,7 +3,7 @@
 #
 # This code extracts DECAF feature descriptors from patches of scene15 dataset.
 # Configuration variables are set below (see extract_sports.sh for descriptions).
-#
+# Usage ./extract_scene15.sh /input/data_dir jobId /destination/dir
 
 patch_size=(16 32 64)
 levels=(1 2 3)
@@ -16,6 +16,8 @@ PATCH_EXTRACTION_METHOD=extra #${patch_method[i]}
 DATASET=scene15
 PSIZE=${patch_size[$((i % COMBINATIONS))]}
 LEVEL=${levels[$((i / COMBINATIONS))]}
+PSIZE=16
+LEVEL=4
 INPUT_DIR=$DATA_DIR/images/$DATASET
 OUT_NAME=all_${PSIZE}_${LEVEL}_${PATCH_EXTRACTION_METHOD}_hybrid_mean_dense
 OUT_PARENT=$DATA_DIR

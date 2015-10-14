@@ -10,8 +10,8 @@ if [ "$#" -gt 1 ]; then
   OUTPUT_DIR=$1/splits_relu
 fi
 NUM_SPLITS=5
-NUM_TRAIN=70	
-NUM_TEST=60
+NUM_TRAIN=100	
+NUM_TEST=100
 PATCHES_PER_IMAGE=500
 
 python ./src/makeSplits.py --input-dir $INPUT_DIR --output-dir $OUTPUT_DIR \

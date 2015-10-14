@@ -15,7 +15,7 @@ import random
 import math
 from itertools import product
 
-import Image
+from PIL import Image
 import numpy as np
 from h5py import File as HDF5File
 from h5py import special_dtype
