@@ -60,6 +60,6 @@ function [features, labels, dataInfo, scalingFactor, trainingMean, Ured] = preAl
 %     disp('Applying PCA reduction');
 %     features = Ured'*features;
     Ured = [];
-    disp('Normalizing vectors...')
-    features = normc(features);
+%     disp('Normalizing vectors...')
+%     features = normc(features);
 end
