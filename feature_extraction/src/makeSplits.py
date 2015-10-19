@@ -42,7 +42,7 @@ def get_arguments():
     parser.add_argument('--limitCategories', dest='limit', action='store_true', default=False)
     parser.add_argument("--category_list", dest="categories",
                         help="File containing list of valid categories")
-    
+
     args = parser.parse_args()
 
     if not args.input_dir:
@@ -138,13 +138,13 @@ def make_split(imageNumbers, output_name, output_dir, patches, positions, image_
         ds.append(keys[idx], p, positions[ir[0]:ir[1]])
     print "dataset with " + str(ds.keys.shape) + " elements"
     ds.close()
-    
+
 def get_legal_categories(categories_file):
     with open(categories_file) as f:
         lines = f.read().splitlines()
         return lines
-    
-    
+
+
 if __name__ == '__main__':
     init_logging()
     log = get_logger()
@@ -160,14 +160,14 @@ if __name__ == '__main__':
     # Determining image files to extract from
     files = sorted(glob(join(args.input_dir, '*.hdf5') ), key=basename)
     start = time.time()
-    
+
     for f in files:
         print "Loading file " + f
         if(args.limit and not(f in legalCategories)):
             print f + " not in selected categories, skipping"
             continue
         hfile = HDF5File(f, 'r', compression='gzip', compression_opts=9, fillvalue=0.0)
-        patches = hfile['patches7']
+        patches = hfile['patches']
         positions = hfile['positions']
         image_index = hfile['image_index']
         keys = hfile['keys']
