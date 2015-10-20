@@ -7,6 +7,7 @@ import os
 from common import get_logger, init_logging
 from subprocess import call
 import random
+from collections import namedtuple
 
 import numpy as np
 from h5py import File as HDF5File
@@ -177,6 +178,32 @@ def is_selected_support(filename):
     hfile = HDF5File(filename, 'r')
     return 'support' in hfile.keys()
 
+class ClassPatches:
+    def __init__(self, filename, indexes):
+        self.file_name = filename
+        self.indexes = indexes
+        self.patches = None
+    def get_patches(self):
+        if self.patches is None:
+            self.load()
+        return self.patches
+    def load(self):
+        get_logger().info("Loading patches for " + self.file_name)
+        hfile = HDF5File(self.file_name, 'r')
+        patches = hfile[PATCH_TYPE]
+        feature_dim = patches.shape[1]
+        indexes = self.indexes
+        num_patches=(indexes[:,1]-indexes[:,0]).sum()
+        self.patches = np.empty([num_patches, feature_dim])
+        patch_start = 0
+        for iid in indexes:
+            n_patches = iid[1]-iid[0]
+            self.patches[patch_start:patch_start+n_patches,:] = patches[iid[0]:iid[1],:]
+            patch_start += n_patches
+        hfile.close()
+    def unload(self):
+        get_logger().info("Unloading patches for " + self.file_name)
+        self.patches = None
 class KDE_Engine:
     def __init__(self, gamma, **args):
         self.gamma = gamma
@@ -203,7 +230,7 @@ def get_engine(alg_type, **params):
     elif alg_type == 'kde':
         return KDE_Engine(**params)
 
-def loadSplits(patch_folder, nTrain, nTest, position_influence):
+def getIndexes(patch_folder, nTrain, nTest, position_influence):
     files = sorted(glob( join(patch_folder, '*.hdf5') ), key=basename)
     train = []
     test = []
@@ -216,18 +243,24 @@ def loadSplits(patch_folder, nTrain, nTest, position_influence):
         np.random.shuffle(iid)
         trainIdx = iid[0:nTrain]
         testIdx  = iid[nTrain:nTrain+nTest]
+        trainData = ClassPatches(filename, trainIdx)
+        testData = ClassPatches(filename, testIdx)
+        test.append(testData)
+        train.append(trainData) #train data is actually loaded only when needed
+        hfile.close()
+    Data = namedtuple("Data","Train Test")
+    return Data(train, test)
 
 
 
 
 
 
-
-def on_the_fly_classify(engine, test_dir, support_dir, num_train_images, num_test_images, position_influence, support_size=0):
+def on_the_fly_classify(engine, data_dir, num_train_images, num_test_images, position_influence, support_size=0):
     log = get_logger()
 
-    test_files = sorted(glob( join(test_dir, '*.hdf5') ), key=basename)
-    num_classes = len(test_files)
+    class_files = sorted(glob( join(data_dir, '*.hdf5') ), key=basename)
+    num_classes = len(class_files)
     log.info('Testing w.r.t. %d classes.' % num_classes)
     if position_influence > 0:
         log.info('Position influence (alpha) is %.2f.', position_influence)
@@ -236,33 +269,29 @@ def on_the_fly_classify(engine, test_dir, support_dir, num_train_images, num_tes
 
     # Identifying labels
     labels = np.vstack([c*np.ones((1,num_test_images), dtype=np.int) for c in range(num_classes)])
-
+    data = getIndexes(data_dir, num_train_images, num_test_images, position_influence)
     log.info('Looking for nearest neighbors...')
-    for (support_class,f) in enumerate(test_files):
-        support_filename = join(support_dir, basename(f))
-
-        if is_selected_support(support_filename):
-            support = get_support(support_filename, support_size)
-        else:
-            support, _ = get_patches(support_filename, num_train_images, position_influence)
-
+    training_data = data.Train
+    for train_class in training_data:
         # Creating index for current class
-        log.info('\tBuilding index from support of class "%s"...', basename(f))
-        engine.fit(support)
-        del support
-
+        log.info('\tBuilding index from support of class "%s"...', train_class.file_name)
+        engine.fit(train_class.get_patches())
+        train_class.unload()
         # Evaluating test samples for all classes using current index
-        for (test_class, test_filename) in enumerate(test_files):
-            (test_patches, test_image_index) = get_patches(test_filename, num_test_images, position_influence)
+        support_class = 0
+        for test_class in data.Test:
+            test_patches = test_class.get_patches()
+            test_image_index = test_class.indexes
 
-            log.info('\tLooking for NNs of "%s"...', basename(test_filename))
+            log.info('\tLooking for NNs of "%s"...', basename(test_class.file_name))
             im_to_class_dists = engine.dist(test_patches)
 
             if len(im_to_class_dists.shape) > 1: # In case of k-NN, we average
                 im_to_class_dists = im_to_class_dists.mean(axis=1)
-
+            log.info(im_to_class_dists.shape)
             dists[support_class, test_class, :] = \
                 np.array([sum(im_to_class_dists[ix[0]:ix[1]]) for ix in test_image_index])
+            support_class += 1
 
 
     predictions = dists.argmin(axis=0)
@@ -330,10 +359,13 @@ if __name__ == '__main__':
         select_random_support(args.train_dir, args.support, args.num_train_images,
                               args.support_size, args.alpha)
     elif args.cmd == 'classify':
-        classify = classify_with_support
         if(args.on_the_fly_splits):
-            classify = on_the_fly_classify
-        classify(get_engine(args.alg_type, gamma=args.gamma, knn=args.knn),
+            get_logger().info("On the fly method chosen")
+            on_the_fly_classify(get_engine(args.alg_type, gamma=args.gamma, knn=args.knn),
+                              args.test_dir, args.num_train_images, args.num_test_images,
+                              args.alpha, args.support_size)
+        else:
+            classify_with_support(get_engine(args.alg_type, gamma=args.gamma, knn=args.knn),
                               args.test_dir, args.support,
                               args.num_train_images, args.num_test_images,
                               args.alpha, args.support_size)

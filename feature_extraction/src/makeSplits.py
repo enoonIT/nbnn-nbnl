@@ -167,7 +167,7 @@ if __name__ == '__main__':
             print f + " not in selected categories, skipping"
             continue
         hfile = HDF5File(f, 'r', compression='gzip', compression_opts=9, fillvalue=0.0)
-        patches = hfile['patches']
+        patches = hfile['patches7']
         positions = hfile['positions']
         image_index = hfile['image_index']
         keys = hfile['keys']
