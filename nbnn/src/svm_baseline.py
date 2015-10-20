@@ -84,7 +84,7 @@ if __name__ == '__main__':
     #for k in kernels:
     for c in cVals:
         k='linear'
-        logger.info("Fitting SVM to data with " + k + " kernel")
+        logger.info("Fitting SVM to data with " + k + " kernel and " + str(c) + " C val")
         clf = svm.SVC(C=c, kernel=k)
         start=time.clock()
         clf.fit(loaded_data.train_patches, loaded_data.train_labels)
