@@ -68,6 +68,7 @@ def load_split(input_folder, nTest, nTrain):
             test_patch_count += 1
         test_labels[classNumber*nTest:(classNumber+1)*nTest]=classNumber*np.ones(nTest)
         logger.info("Patch count: " + str(train_patch_count) + " training and " + str(test_patch_count) + " test patches for class " + filename)
+        hfile.close()
     end = time.clock()
     logger.info("It took " + str((end-start)) + " seconds");
     LoadedData = namedtuple("LoadedData","train_patches train_labels test_patches test_labels")
@@ -79,11 +80,12 @@ if __name__ == '__main__':
     logger = get_logger()
     args = get_arguments()
     loaded_data = load_split(args.input_dir, args.num_test_images, args.num_train_images)
-    kernels = ['linear','poly','rbf','sigmoid']
-    cVals = [0.1, 1, 10, 100, 1000]
-    #for k in kernels:
-    for c in cVals:
+    kernels = ['linear']
+    #cVals = [0.1, 1, 10, 100, 1000]
+    for k in kernels:
+    #for c in cVals:
         k='linear'
+        c=1
         logger.info("Fitting SVM to data with " + k + " kernel and " + str(c) + " C val")
         clf = svm.SVC(C=c, kernel=k)
         start=time.clock()

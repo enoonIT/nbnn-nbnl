@@ -3,7 +3,7 @@
 
 algM = 100
 algP = 1.5;
-algIter= 60
+algIter= 30
 
 % data_folder = '~/data';
 % jobId = 1;
@@ -12,7 +12,7 @@ output_folder = strcat(data_folder,'/output/');
 if ~exist(output_folder, 'dir')
   mkdir(output_folder);
 end
-outName = strcat(output_folder,'job_NBNLScenes_',num2str(jobId),'.mat')
+outName = strcat(output_folder,'job_NBNL_ISR67_',num2str(jobId),'.mat')
 if exist(outName,'file')
     disp('Job already performed - skipping');
     return

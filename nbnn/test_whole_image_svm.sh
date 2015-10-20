@@ -18,6 +18,6 @@ for ((SPLIT = START; SPLIT <= END; SPLIT++))
 	--input-dir $DATA_DIR \
 	--num-train-images $NUM_TRAIN \
 	--num-test-images $NUM_TEST \
-	--patch_name "patches"
+	--patch_name "patches7"
     done
 

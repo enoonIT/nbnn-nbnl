@@ -1,14 +1,14 @@
 function [algM, input_folder, split ] = gridJobInterpreter( jobId , data_folder)
 %JOBINTERPRETER Summary of this function goes here
 %   Detailed explanation goes here
-    test_datasets = {'all_32_3_extra_hybrid_mean_dense', 'all_64_2_extra_hybrid_mean_dense', 'all_16_3_extra_hybrid_mean_dense','all_16_4_extra_hybrid_mean_dense'};
-    algMs = [10 100 1000];
-    combinations = 4*5; % 4 patch settings, 5 splits
+    test_datasets = {'all_32_3_extra_hybrid_mean', 'all_64_2_extra_hybrid_mean_dense'};
+    algMs = [3 10 30];
+    combinations = 2*5; % 2 patch settings, 5 splits
     algM = algMs(ceil(jobId/combinations));
     jobId = mod(jobId, combinations);
     jobId(jobId==0)=combinations;
     jobD = ceil(jobId/5);
-    input_folder = strcat(data_folder, '/desc/scene15/',test_datasets{jobD}, '/splits/');
+    input_folder = strcat(data_folder, '/desc/ISR67/',test_datasets{jobD}, '/splits/');
 %     ps = [1:0.1:2 3 10 1000];
 %     lambdas = [1e-07 1e-06 1e-05 1e-04];
 %     nP = length(ps);
