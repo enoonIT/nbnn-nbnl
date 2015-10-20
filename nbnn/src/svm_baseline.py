@@ -9,8 +9,9 @@ from common import init_logging, get_logger
 import time
 from collections import namedtuple
 
-PatchOptions = namedtuple("PatchOptions","patch_name size")
-patchOptions = PatchOptions("patches7", 4096)
+class patchOptions(object):
+    patch_name="patches7"
+    size=4096
 
 def get_arguments():
     log = get_logger()
@@ -25,6 +26,7 @@ def get_arguments():
     parser.add_argument("--patch_name", dest="patch_name",
                         help="The name of the patches in the HDF5 File.")
     args = parser.parse_args()
+    patchOptions.patch_name=args.patch_name
     if not 'input_dir' in args:
         log.error('input dir is required, but not present.')
         exit()
@@ -78,9 +80,12 @@ if __name__ == '__main__':
     args = get_arguments()
     loaded_data = load_split(args.input_dir, args.num_test_images, args.num_train_images)
     kernels = ['linear','poly','rbf','sigmoid']
-    for k in kernels:
+    cVals = [0.1, 1, 10, 100, 1000]
+    #for k in kernels:
+    for c in cVals:
+        k='linear'
         logger.info("Fitting SVM to data with " + k + " kernel")
-        clf = svm.SVC(kernel=k)
+        clf = svm.SVC(C=c, kernel=k)
         start=time.clock()
         clf.fit(loaded_data.train_patches, loaded_data.train_labels)
         res = clf.predict(loaded_data.test_patches)
