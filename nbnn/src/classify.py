@@ -8,7 +8,7 @@ from common import get_logger, init_logging
 from subprocess import call
 import random
 from collections import namedtuple
-
+from ClassPatches import ClassPatches
 import numpy as np
 from h5py import File as HDF5File
 import pyflann
@@ -178,32 +178,6 @@ def is_selected_support(filename):
     hfile = HDF5File(filename, 'r')
     return 'support' in hfile.keys()
 
-class ClassPatches:
-    def __init__(self, filename, indexes):
-        self.file_name = filename
-        self.indexes = indexes
-        self.patches = None
-    def get_patches(self):
-        if self.patches is None:
-            self.load()
-        return self.patches
-    def load(self):
-        get_logger().info("Loading patches for " + self.file_name)
-        hfile = HDF5File(self.file_name, 'r')
-        patches = hfile[PATCH_TYPE]
-        feature_dim = patches.shape[1]
-        indexes = self.indexes
-        num_patches=(indexes[:,1]-indexes[:,0]).sum()
-        self.patches = np.empty([num_patches, feature_dim])
-        patch_start = 0
-        for iid in indexes:
-            n_patches = iid[1]-iid[0]
-            self.patches[patch_start:patch_start+n_patches,:] = patches[iid[0]:iid[1],:]
-            patch_start += n_patches
-        hfile.close()
-    def unload(self):
-        get_logger().info("Unloading patches for " + self.file_name)
-        self.patches = None
 class KDE_Engine:
     def __init__(self, gamma, **args):
         self.gamma = gamma
@@ -243,8 +217,8 @@ def getIndexes(patch_folder, nTrain, nTest, position_influence):
         np.random.shuffle(iid)
         trainIdx = iid[0:nTrain]
         testIdx  = iid[nTrain:nTrain+nTest]
-        trainData = ClassPatches(filename, trainIdx)
-        testData = ClassPatches(filename, testIdx)
+        trainData = ClassPatches(filename, trainIdx, PATCH_TYPE)
+        testData = ClassPatches(filename, testIdx, PATCH_TYPE)
         test.append(testData)
         train.append(trainData) #train data is actually loaded only when needed
         hfile.close()

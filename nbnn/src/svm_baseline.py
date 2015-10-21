@@ -8,6 +8,7 @@ from os.path import join, basename
 from common import init_logging, get_logger
 import time
 from collections import namedtuple
+from ClassPatches import ClassPatches
 
 class patchOptions(object):
     patch_name="patches7"
@@ -25,10 +26,18 @@ def get_arguments():
                         help="Number of images to use from the test set.")
     parser.add_argument("--patch_name", dest="patch_name",
                         help="The name of the patches in the HDF5 File.")
+    parser.add_argument("--patches-per-image", dest="patches_per_image", type=int,
+                        help="Number of patches for each image.")
+    parser.add_argument("--cmd", dest="cmd",
+                        choices=['whole-image-svm', 'svm-nbnl'],
+                        help="Command to execute.")
     args = parser.parse_args()
     patchOptions.patch_name=args.patch_name
     if not 'input_dir' in args:
         log.error('input dir is required, but not present.')
+        exit()
+    if not 'cmd' in args:
+        log.error('cmd is required, but not present.')
         exit()
     if not 'num_train_images' in args:
         log.error('num_train_images is required, but not present.')
@@ -39,7 +48,7 @@ def get_arguments():
     return args
 
 
-def load_split(input_folder, nTest, nTrain):
+def load_split_whole_image_only(input_folder, nTrain, nTest):
     logger = get_logger()
     files = sorted(glob( join(input_folder, '*.hdf5') ), key=basename)
     nClasses = len(files);
@@ -74,23 +83,72 @@ def load_split(input_folder, nTest, nTrain):
     LoadedData = namedtuple("LoadedData","train_patches train_labels test_patches test_labels")
     return LoadedData(train_patches, train_labels, test_patches, test_labels)
 
+def get_indexes(patch_folder, nTrain, nTest, position_influence):
+    files = sorted(glob( join(patch_folder, '*.hdf5') ), key=basename)
+    train = []
+    test = []
+    for (classNumber,filename) in enumerate(files):
+        #support_filename = join(".", basename(filename))
+        hfile = HDF5File(filename, 'r')
+        iid = hfile["image_index"][:]
+        nImages = iid.shape[0]
+        assert nImages >= (nTrain + nTest), "Not enough images!"
+        np.random.shuffle(iid)
+        trainIdx = iid[0:nTrain]
+        testIdx  = iid[nTrain:nTrain+nTest]
+        trainData = ClassPatches(filename, trainIdx, patchOptions.patch_name)
+        train.append(trainData) #train data is actually loaded only when needed
+        testData = ClassPatches(filename, testIdx, patchOptions.patch_name)
+        test.append(testData)
+        hfile.close()
+    Data = namedtuple("Data","Train Test")
+    return Data(train, test)
+
+def do_nbnl(args):
+    logger = get_logger()
+    logger.info("Getting indexes")
+    data = get_indexes(args.input_dir, args.num_train_images, args.num_test_images, args.patches_per_image)
+    train = data.Train
+    num_classes = len(train)
+    num_test_images = args.num_test_images
+    num_train_images = args.num_train_images
+    logger.info("Loading training patches")
+    X = np.vstack([t.get_patches() for t in train])
+    for t in train: t.unload()
+    Y = np.vstack([c*np.ones((1,num_train_images), dtype=np.int) for c in range(num_classes)])
+    clf = svm.SVC(kernel='linear')
+    logger.info("Training Linear SVM at patch level")
+    clf.fit(X,Y)
+    logger.info("Training completed, freeing training patches")
+    del X, Y
+    testX = np.vstack([t.get_patches() for t in data.Test])
+    for t in data.Test: t.unload()
+    testY = np.vstack([c*np.ones((1,num_test_images), dtype=np.int) for c in range(num_classes)])
+    score = clf.score(testX, testY)
+    logger.info("Accuracy " + str(score) + " at patch level")
+
+
+def do_whole_image_svm(args):
+    logger = get_logger()
+    loaded_data = load_split_whole_image_only(args.input_dir, args.num_train_images, args.num_test_images)
+    #kernels = ['linear']
+    #cVals = [0.1, 1, 10, 100, 1000]
+    k='linear'
+    c=1
+    logger.info("Fitting SVM to data with " + k + " kernel and " + str(c) + " C val")
+    clf = svm.SVC(C=c, kernel=k)
+    start=time.clock()
+    clf.fit(loaded_data.train_patches, loaded_data.train_labels)
+    res = clf.predict(loaded_data.test_patches)
+    correct = (res==loaded_data.test_labels).sum()
+    score = clf.score(loaded_data.test_patches, loaded_data.test_labels)
+    end=time.clock()
+    logger.info("Got " + str((100.0*correct)/loaded_data.test_labels.size) + "% correct, took " + str(end-start) + " seconds " + str(score))
 
 if __name__ == '__main__':
     init_logging()
-    logger = get_logger()
     args = get_arguments()
-    loaded_data = load_split(args.input_dir, args.num_test_images, args.num_train_images)
-    kernels = ['linear']
-    #cVals = [0.1, 1, 10, 100, 1000]
-    for k in kernels:
-    #for c in cVals:
-        k='linear'
-        c=1
-        logger.info("Fitting SVM to data with " + k + " kernel and " + str(c) + " C val")
-        clf = svm.SVC(C=c, kernel=k)
-        start=time.clock()
-        clf.fit(loaded_data.train_patches, loaded_data.train_labels)
-        res = clf.predict(loaded_data.test_patches)
-        correct = (res==loaded_data.test_labels).sum()
-        end=time.clock()
-        logger.info("Got " + str((100.0*correct)/loaded_data.test_labels.size) + "% correct, took " + str(end-start) + " seconds")
+    if args.cmd == 'whole-image-svm':
+        do_whole_image_svm(args)
+    elif args.cmd = "svm-nbnl"
+        do_nbnl(args)
