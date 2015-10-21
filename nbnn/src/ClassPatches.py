@@ -31,3 +31,5 @@ class ClassPatches:
     def unload(self):
         get_logger().info("Unloading patches for " + self.file_name)
         self.patches = None
+    def get_num_patches(self):
+        return (self.indexes[:,1]-self.indexes[:,0]).sum()

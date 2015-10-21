@@ -18,6 +18,7 @@ for ((SPLIT = START; SPLIT <= END; SPLIT++))
 	--input-dir $DATA_DIR \
 	--num-train-images $NUM_TRAIN \
 	--num-test-images $NUM_TEST \
-	--patch_name "patches" --cmd "svm-nbnl"
+	--patch_name "patches7" --cmd "svm-nbnl" \
+	--patches-per-image 350
     done
 

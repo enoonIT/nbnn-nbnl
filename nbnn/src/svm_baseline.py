@@ -9,6 +9,7 @@ from common import init_logging, get_logger
 import time
 from collections import namedtuple
 from ClassPatches import ClassPatches
+from joblib import Parallel, delayed
 
 class patchOptions(object):
     patch_name="patches7"
@@ -110,21 +111,26 @@ def do_nbnl(args):
     data = get_indexes(args.input_dir, args.num_train_images, args.num_test_images, args.patches_per_image)
     train = data.Train
     num_classes = len(train)
-    num_test_images = args.num_test_images
-    num_train_images = args.num_train_images
     logger.info("Loading training patches")
     X = np.vstack([t.get_patches() for t in train])
     for t in train: t.unload()
-    Y = np.vstack([c*np.ones((1,num_train_images), dtype=np.int) for c in range(num_classes)])
-    clf = svm.SVC(kernel='linear')
+    Y = np.vstack([c*np.ones((train[c].get_num_patches(),1), dtype=np.int) for c in range(num_classes)])
+    clf = svm.LinearSVC(dual=False)
     logger.info("Training Linear SVM at patch level")
-    clf.fit(X,Y)
+    logger.info(str(X.shape) + " X, " + str(Y.shape) + " Y")
+    clf.fit(X,Y.ravel())
     logger.info("Training completed, freeing training patches")
     del X, Y
-    testX = np.vstack([t.get_patches() for t in data.Test])
-    for t in data.Test: t.unload()
-    testY = np.vstack([c*np.ones((1,num_test_images), dtype=np.int) for c in range(num_classes)])
+    test = data.Test
+    testX = np.vstack([t.get_patches() for t in test])
+    for t in test: t.unload()
+    testY = np.vstack([c*np.ones((test[c].get_num_patches(),1), dtype=np.int) for c in range(num_classes)])
+    logger.info(str(testX.shape) + " testX, " + str(testY.shape) + " testY")
+    logger.info("Evaluating test patches...")
     score = clf.score(testX, testY)
+    #Parallel(n_jobs=2)(delayed(sqrt)(i ** 2) for i in range(10))
+    #res = clf.predict(testX)
+    #correct = (res==testY).sum()
     logger.info("Accuracy " + str(score) + " at patch level")
 
 
@@ -150,5 +156,5 @@ if __name__ == '__main__':
     args = get_arguments()
     if args.cmd == 'whole-image-svm':
         do_whole_image_svm(args)
-    elif args.cmd = "svm-nbnl"
+    elif args.cmd == "svm-nbnl":
         do_nbnl(args)
