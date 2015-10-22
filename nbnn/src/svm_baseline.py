@@ -130,11 +130,12 @@ def do_nbnl(args):
     confidence = clf.decision_function(testX)
     predicted = np.argmax(confidence,1)
     pred = clf.predict(testX)
-    print pred[0:10]
-    print predict[0:10]
-    correct=(predicted==testY).sum()
+    print testY.ravel()
+    print predicted
+    correct=(predicted==testY.ravel()).sum()
+    print correct
     score = clf.score(testX, testY)
-    logger.info("Accuracy " + str(score) + " at patch level " + str(correct/len(predicted)))
+    logger.info("Accuracy " + str(score) + " at patch level " + str((100.0*correct)/len(predicted)))
 
 
 def do_whole_image_svm(args):
