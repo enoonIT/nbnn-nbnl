@@ -129,6 +129,9 @@ def do_nbnl(args):
     logger.info("Evaluating test patches...")
     confidence = clf.decision_function(testX)
     predicted = np.argmax(confidence,1)
+    pred = clf.predict(testX)
+    print pred[0:10]
+    print predict[0:10]
     correct=(predicted==testY).sum()
     score = clf.score(testX, testY)
     logger.info("Accuracy " + str(score) + " at patch level " + str(correct/len(predicted)))
