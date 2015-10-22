@@ -128,9 +128,6 @@ def do_nbnl(args):
     logger.info(str(testX.shape) + " testX, " + str(testY.shape) + " testY")
     logger.info("Evaluating test patches...")
     score = clf.score(testX, testY)
-    #Parallel(n_jobs=2)(delayed(sqrt)(i ** 2) for i in range(10))
-    #res = clf.predict(testX)
-    #correct = (res==testY).sum()
     logger.info("Accuracy " + str(score) + " at patch level")
 
 
