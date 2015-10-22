@@ -127,8 +127,11 @@ def do_nbnl(args):
     testY = np.vstack([c*np.ones((test[c].get_num_patches(),1), dtype=np.int) for c in range(num_classes)])
     logger.info(str(testX.shape) + " testX, " + str(testY.shape) + " testY")
     logger.info("Evaluating test patches...")
+    confidence = clf.decision_function(testX)
+    predicted = np.argmax(confidence,1)
+    correct=(predicted==testY).sum()
     score = clf.score(testX, testY)
-    logger.info("Accuracy " + str(score) + " at patch level")
+    logger.info("Accuracy " + str(score) + " at patch level " + str(correct/len(predicted))
 
 
 def do_whole_image_svm(args):
