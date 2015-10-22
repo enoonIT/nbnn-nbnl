@@ -135,7 +135,7 @@ def do_nbnl(args):
     test_indexes = np.empty([num_classes, args.num_test_images, 2])
     for c in range(num_classes):
         test_indexes[c]=test[c].get_new_indexes()
-    image_labels = [c*np.ones((args.num_test_images,1)) for c in range(num_classes)]
+    image_labels = np.vstack([c*np.ones((args.num_test_images,1)) for c in range(num_classes)])
     nbnl(confidence, test_indexes, image_labels)
 
 def nbnl(patch_confidence, test_indexes, labels):
