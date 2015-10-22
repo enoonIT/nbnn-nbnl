@@ -129,14 +129,32 @@ def do_nbnl(args):
     logger.info("Evaluating test patches...")
     confidence = clf.decision_function(testX)
     predicted = np.argmax(confidence,1)
-    pred = clf.predict(testX)
-    print testY.ravel()
-    print predicted
     correct=(predicted==testY.ravel()).sum()
-    print correct
     score = clf.score(testX, testY)
     logger.info("Accuracy " + str(score) + " at patch level " + str((100.0*correct)/len(predicted)))
+    test_indexes = np.empty([num_classes, args.num_test_images, 2])
+    for c in range(num_classes):
+        test_indexes[c]=test[c].get_new_indexes()
+    nbnl(confidence, test_indexes, testY.ravel())
 
+def nbnl(patch_confidence, test_indexes, labels):
+    logger = get_logger()
+    logger.info("Starting NBNL")
+    n_classes = test_indexes.shape[0]
+    start = 0
+    n_image = 0
+    results = np.emptu(labels.shape)
+    for c in range(n_classes):
+        for iid in range(test_indexes[c]):
+            num_patches = iid[1]-iid[0]
+            s = start + iid[0]
+            e = s + num_patches
+            image_score = patch_confidence[s:e].sum(0)
+            results[n_image] = np.argmax(image_score)
+            start += num_patches
+            n_image += 1
+    correct=(results==labels).sum()
+    logger.info("Accuracy " + str((correct*100.0)/len(labels)) + " at image level ")
 
 def do_whole_image_svm(args):
     logger = get_logger()
