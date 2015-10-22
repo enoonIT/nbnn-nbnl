@@ -143,16 +143,21 @@ def nbnl(patch_confidence, test_indexes, labels):
     n_classes = test_indexes.shape[0]
     start = 0
     n_image = 0
-    results = np.emptu(labels.shape)
+    results = np.empty(labels.shape)
+    logger.info("shape " + str(results.shape))
     for c in range(n_classes):
-        for iid in range(test_indexes[c]):
+        for iid in test_indexes[c]:
+            print results
             num_patches = iid[1]-iid[0]
+            logger.info("class " + str(c) + " image " + str(n_image) + " n patches " + str(num_patches))
             s = start + iid[0]
             e = s + num_patches
             image_score = patch_confidence[s:e].sum(0)
             results[n_image] = np.argmax(image_score)
+            logger.info("Predicted " + str(np.argmax(image_score))+" " + str(results[n_image]))
             start += num_patches
             n_image += 1
+    logger.info(results)
     correct=(results==labels).sum()
     logger.info("Accuracy " + str((correct*100.0)/len(labels)) + " at image level ")
 

@@ -39,6 +39,6 @@ class ClassPatches:
         return (self.indexes[:,1]-self.indexes[:,0]).sum()
     def get_new_indexes(self):
         # indexes according to the new patch layout, after extraction
-        if self.new_index == None:
+        if self.new_index is None:
             self.load()
         return self.new_index
