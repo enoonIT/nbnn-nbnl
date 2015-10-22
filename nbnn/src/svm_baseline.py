@@ -131,7 +131,7 @@ def do_nbnl(args):
     predicted = np.argmax(confidence,1)
     correct=(predicted==testY).sum()
     score = clf.score(testX, testY)
-    logger.info("Accuracy " + str(score) + " at patch level " + str(correct/len(predicted))
+    logger.info("Accuracy " + str(score) + " at patch level " + str(correct/len(predicted)))
 
 
 def do_whole_image_svm(args):
