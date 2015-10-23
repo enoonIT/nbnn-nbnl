@@ -17,13 +17,13 @@ DATASET=scene15
 PSIZE=${patch_size[$((i % COMBINATIONS))]}
 LEVEL=${levels[$((i / COMBINATIONS))]}
 INPUT_DIR=$DATA_DIR/images/$DATASET
+PSIZE=32
+LEVEL=3
 OUT_NAME=all_${PSIZE}_${LEVEL}_${PATCH_EXTRACTION_METHOD}_hybrid_mean_dense
 OUT_PARENT=$DATA_DIR
 if [ "$#" -gt 2 ]; then
   OUT_PARENT=$3
 fi
-PSIZE=16
-LEVEL=0
 OUTPUT_DIR=${OUT_PARENT}/desc/$DATASET/$OUT_NAME
 
 echo $OUTPUT_DIR

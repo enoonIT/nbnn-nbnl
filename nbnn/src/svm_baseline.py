@@ -68,7 +68,7 @@ def load_split_whole_image_only(input_folder, nTrain, nTest):
         np.random.shuffle(iid)
         trainIdx = iid[0:nTrain]
         testIdx  = iid[nTrain:nTrain+nTest]
-        patches = hfile[patchOptions.patch_name][:]
+        patches = hfile[patchOptions.patch_name]
         for iid in trainIdx:
             train_patches[train_patch_count]=patches[iid[0]]
             train_patch_count += 1
@@ -149,14 +149,13 @@ def nbnl(patch_confidence, test_indexes, labels):
     for c in range(n_classes):
         for iid in test_indexes[c]:
             num_patches = iid[1]-iid[0]
-            logger.info("class " + str(c) + " image " + str(n_image) + " n patches " + str(num_patches))
-            s = start + iid[0]
+            s = start
             e = s + num_patches
             image_score = patch_confidence[s:e].sum(0)
             results[n_image] = np.argmax(image_score)
-            logger.info("Predicted " + str(np.argmax(image_score))+" " + str(results[n_image]))
-            start += num_patches
+            #logger.info("Predicted " + str(np.argmax(image_score)) + "/" + str(c) + " " + str(s) + " to " + str(e))
             n_image += 1
+            start += num_patches
     correct=(results==labels).sum()
     logger.info("Accuracy " + str((correct*100.0)/len(labels)) + " at image level ")
 
