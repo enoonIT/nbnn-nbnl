@@ -103,9 +103,13 @@ def walk(params, dir_name, files):
         elif os.path.exists(new_file):
             get_logger().info("Skipping " + new_file + ": already exists")
             continue
-        features = ex.extract_image(old_file)
-        (patches6, patches7, positions) = features.get()
-        create_hdf5_dataset(new_file, patches7, positions)
+        try:
+            features = ex.extract_image(old_file)
+            (patches6, patches7, positions) = features.get()
+            create_hdf5_dataset(new_file, patches7, positions)
+        except:
+            get_logger().error("Traceback: couldn't extract features from image " + old_file + ", skipping")
+            continue
 
 
 
