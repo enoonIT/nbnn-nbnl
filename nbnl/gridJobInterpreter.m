@@ -1,7 +1,7 @@
 function [algM, input_folder, split ] = gridJobInterpreter( jobId , data_folder)
 %JOBINTERPRETER Summary of this function goes here
 %   Detailed explanation goes here
-    test_datasets = {'all_32_3_extra_hybrid_mean', 'all_64_2_extra_hybrid_mean_dense'};
+    test_datasets = {'all_32_3_extra_hybrid_mean', 'all_64_2_extra_hybrid_mean'};
     algMs = [3 10 30];
     combinations = 2*5; % 2 patch settings, 5 splits
     algM = algMs(ceil(jobId/combinations));

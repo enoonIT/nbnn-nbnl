@@ -177,13 +177,14 @@ class CaffeExtractorPlus:
 
     def balanced_extract(self, im, feature_storage, check_patch_coords, transform, filename):
         (w, h) = im.size
+        log = get_logger()
         # Extracting features from patches
         preprocessedPatches = np.empty([self.patches_per_image, 3, 227, 227], dtype="float32")
         positions = np.zeros((self.patches_per_image,2), dtype="uint16")
         # Calculating patch step
         if self.levels > 0:
             patchesXLevel = self.patches_per_image/len(self.patch_sizes)
-            print "Patches per level: " + str(patchesXLevel)
+            log.info("Patches per level: " + str(patchesXLevel))
         k=0
         if isinstance(transform, NopTransform): # Hacky.... #TODO why only for NopTransform?
             # Extracting features for the whole image
