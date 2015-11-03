@@ -3,8 +3,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-color1 = [0.8, 0.5, 0.5]
-color2 = [0.5, 0.5, 0.8]
+color1 = [0.6, 0.9, 0.6]
+color2 = [0.6, 0.8, 0.9]
 errorbars=dict(ecolor='black', lw=1.5, capsize=3, capthick=1.5)
 
 relu16 = (75.44, 80.40, 84.29, 88.24)
@@ -28,7 +28,7 @@ N = num16+num32+num64
 ind = np.arange(N)  # the x locations for the groups
 width = 0.25       # the width of the bars
 
-fig, ax = plt.subplots()
+fig, ax = plt.subplots(figsize=(18,8))
 b16_relu = ax.bar(ind[:num16], relu16, width, color=color1, yerr=relu16_std, error_kw=errorbars)
 b16_nrelu = ax.bar(ind[:num16] + width, nrelu16, width, color=color2, yerr=nrelu16_std, error_kw=errorbars)
 b32_relu = ax.bar(ind[num16:num16+num32], relu32, width, color=color1, yerr=relu32_std, error_kw=errorbars)
