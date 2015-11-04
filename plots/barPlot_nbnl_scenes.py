@@ -6,8 +6,8 @@ if __name__ == "__main__":
     name = "Scenes 15"
     ml3_relu = [92.092, 0]
     ml3_nrelu = [92.426, 91.506]
-    ml3_relu_std = [0.5764720288, 0.4366119559]
-    ml3_nrelu_std = [0.6440729772, 0.0]
+    ml3_relu_std = [0.5764720288, 0.0]
+    ml3_nrelu_std = [0.6440729772, 0.437]
 
     sm_ml3_relu = [92.88]
     sm_ml3_nrelu= [92.41]
