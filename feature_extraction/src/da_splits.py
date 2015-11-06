@@ -7,7 +7,7 @@ from os.path import join, basename
 from os import makedirs
 
 class patchOptions(object):
-    patch_name="patches7"
+    patch_name="patches"
     position_name = "positions"
     relu = True
     patch_dim=4096
@@ -104,7 +104,7 @@ def load_dataset_da(all_class_indexes, output_folder):
             class_images = misc.indexes.shape[0]
             patches[current:current+class_samples] = misc.patches
             positions[current:current+class_samples] = misc.tags
-            import pdb; pdb.set_trace()
+            #import pdb; pdb.set_trace()
             idx[current_image:current_image+class_images] = misc.indexes + current
             current += class_samples
             current_image += class_images
