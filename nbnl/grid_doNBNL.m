@@ -18,7 +18,7 @@ if exist(outName,'file')
     return
 end
 [algM, dataset_dir, split ] = gridJobInterpreter(jobId, data_folder);
-algP=1.5;
+algP=2;
 
 algo = ML3();
 algo.m = algM;

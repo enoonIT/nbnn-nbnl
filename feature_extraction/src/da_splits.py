@@ -7,7 +7,7 @@ from os.path import join, basename
 from os import makedirs
 
 class patchOptions(object):
-    patch_name="patches7"
+    patch_name="patches"
     position_name = "positions"
     relu = True
     patch_dim=4096
