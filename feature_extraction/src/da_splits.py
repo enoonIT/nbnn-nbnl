@@ -7,13 +7,13 @@ from os.path import join, basename
 from os import makedirs
 
 class patchOptions(object):
-    patch_name="patches"
+    patch_name="patches7"
     position_name = "positions"
     relu = True
     patch_dim=4096
 
 MiscData = namedtuple("MiscData","patches positions idx")
-ClassData = namedtuple("ClassData","patches positions tags n_samples")
+ClassData = namedtuple("ClassData","patches positions tags n_samples indexes")
 ClassIndexes = namedtuple("ClassIndexes", "filename index")
 Data = namedtuple("Data","train test")
 
@@ -44,17 +44,20 @@ def load_patches(class_data):
         num_patches=(indexes[:,1]-indexes[:,0]).sum()
         loaded_patches = np.empty([num_patches, feature_dim])
         loaded_positions = np.empty([num_patches, 2])
+        loaded_idx = np.empty([class_data.index.shape[0], 2])
         tags = np.zeros([num_patches,1])
         patch_start = n_image = 0
-        for iid in indexes:
+        #import pdb; pdb.set_trace()
+        for n, iid in enumerate(indexes):
             n_patches = iid[1]-iid[0]
             loaded_patches[patch_start:patch_start+n_patches,:] = patches[iid[0]:iid[1],:]
             loaded_positions[patch_start:patch_start+n_patches,:] = positions[iid[0]:iid[1],:]
+            loaded_idx[n,:] = np.array([patch_start, patch_start+n_patches])
             tags[patch_start] = 1
             patch_start += n_patches
             n_image += 1
         hfile.close()
-        return ClassData(loaded_patches, loaded_positions, tags, num_patches)
+        return ClassData(loaded_patches, loaded_positions, tags, num_patches, loaded_idx)
 
 def get_indexes_da(source_folder, target_folder, nTrain, transferImages):
     get_logger().info("Loading indexes")
@@ -85,21 +88,27 @@ def get_indexes_da(source_folder, target_folder, nTrain, transferImages):
 def load_dataset_da(all_class_indexes, output_folder):
     for ci, tuple_c in enumerate(all_class_indexes):
         n_patches = 0
+        n_images = 0
         for class_idx in tuple_c:
             n_patches += (class_idx.index[:,1]-class_idx.index[:,0]).sum()
+            n_images += class_idx.index.shape[0]
         patches = np.empty([n_patches, patchOptions.patch_dim])
         positions = np.empty([n_patches,2])
-        idx = np.empty([n_patches, 2])
+        idx = np.empty([n_images, 2])
         current = 0
+        current_image = 0
         get_logger().info("Loading class " + str(ci))
         for c in tuple_c:
             misc = load_patches(c)
             class_samples = misc.n_samples
+            class_images = misc.indexes.shape[0]
             patches[current:current+class_samples] = misc.patches
             positions[current:current+class_samples] = misc.tags
-            idx[current:current+class_samples] = np.array([current, current+class_samples])
+            import pdb; pdb.set_trace()
+            idx[current_image:current_image+class_images] = misc.indexes + current
             current += class_samples
-            get_logger().info("Loaded " + str(class_samples) + " for class " + c.filename)
+            current_image += class_images
+            get_logger().info("Loaded " + str(class_samples) + "-" + str(class_images) + " for class " + c.filename)
             if patchOptions().relu:
                 get_logger().info("Applying RELU")
                 patches[patches < 0]=0
