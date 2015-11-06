@@ -103,7 +103,7 @@ def load_dataset_da(all_class_indexes, output_folder):
             class_samples = misc.n_samples
             class_images = misc.indexes.shape[0]
             patches[current:current+class_samples] = misc.patches
-            positions[current:current+class_samples] = misc.tags
+            positions[current:current+class_samples] = misc.positions
             #import pdb; pdb.set_trace()
             idx[current_image:current_image+class_images] = misc.indexes + current
             current += class_samples
