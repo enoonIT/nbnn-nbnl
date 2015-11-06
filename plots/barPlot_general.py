@@ -11,7 +11,8 @@ def do_labels(elements, sizes):
     return labels
 
 def do_plot(name, res_a, res_b, err_a, err_b, xlabels, a_label="RELU", b_label="NOT RELU", method="NBNN", patch_density="dense", \
-            width=0.35, plot_height=5, height_delta=2.5, W_SIZE=None, MIN_STEP_SIZE=2.5,ROTATION=30, Y_LIM_MIN=None, Y_LIM_MAX=None, plot_title=None):
+            width=0.35, plot_height=5, height_delta=2.5, W_SIZE=None, MIN_STEP_SIZE=2.5,ROTATION=30, Y_LIM_MIN=None, Y_LIM_MAX=None, plot_title=None, \
+            add_labels=False):
     color1 = [0.6, 0.9, 0.6]
     color2 = [0.6, 0.8, 0.9]
     errorbars=dict(ecolor='black', lw=1.5, capsize=3, capthick=1.5)
@@ -56,8 +57,9 @@ def do_plot(name, res_a, res_b, err_a, err_b, xlabels, a_label="RELU", b_label="
                     '%d' % int(height),
                     ha='center', va='bottom')
 
-    autolabel(series_a)
-    autolabel(series_b)
+    if add_labels:
+        autolabel(series_a)
+        autolabel(series_b)
 
     if Y_LIM_MIN is None: Y_LIM_MIN=min(min(res_a,res_b))-5
     if Y_LIM_MAX is None: Y_LIM_MAX=max(max(res_a,res_b))+2

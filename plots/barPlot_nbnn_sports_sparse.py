@@ -76,12 +76,12 @@ if __name__ == "__main__":
                     '%d' % int(height),
                     ha='center', va='bottom')
 
-    autolabel(b16_relu)
-    autolabel(b16_nrelu)
-    autolabel(b32_relu)
-    autolabel(b32_nrelu)
-    autolabel(b64_relu)
-    autolabel(b64_nrelu)
+    #autolabel(b16_relu)
+    #autolabel(b16_nrelu)
+    #autolabel(b32_relu)
+    #autolabel(b32_nrelu)
+    #autolabel(b64_relu)
+    #autolabel(b64_nrelu)
     
     plt.ylim([min(relu16)-5, max(relu32)+3])
     plt.xlim([ind[0]-0.5, ind[-1]+1])
