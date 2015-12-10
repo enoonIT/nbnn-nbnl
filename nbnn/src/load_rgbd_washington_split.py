@@ -3,7 +3,7 @@ from os.path import join
 import os, re, common
 from sklearn import svm
 from h5py import File as HDF5File
-import time
+import time, glob
 import numpy as np
 nregex = re.compile("(\w+)\_\d")
 
@@ -22,7 +22,9 @@ def get_logger():
 
 def get_arguments():
     parser = ArgumentParser(description='Utility to load training\testing splits for the Washington RGB-D Object Dataset.')
+    parser.add_argument("mode", help="What should this script do. 'gen' or 'svm'")
     parser.add_argument("input_folder",help="The folder containing the extracted features")
+    parser.add_argument("--output_folder",help="The folder where to position the split files")
     parser.add_argument("split_file",help="The file from which to load the splits")
     parser.add_argument("split",help="Which training split to load",type=int)
     args = parser.parse_args()
@@ -56,6 +58,9 @@ def is_hdf5(filename):
 def is_depth_file(filename):
     return filename.lower().endswith('_depthcrop.png.hdf5')
 
+def is_image(filename):
+    return filename.lower().endswith(('_crop.png'))
+
 train_features = {}
 test_features = {}
 
@@ -73,24 +78,38 @@ def walk(test_instances, dir_name, files):
     image_features = features.get(basename, [])
     #import pdb; pdb.set_trace()
     for f in files:
-        file_path = join(dir_name,f)
-        if os.path.isdir(file_path):
+        depth_file_path = join(dir_name,f)
+        if os.path.isdir(depth_file_path):
             continue
-        elif not is_hdf5(file_path):
-            get_logger().info("Skipping " + file_path + ": not an Hdf5 file")
+        elif not is_hdf5(depth_file_path):
+            get_logger().info("Skipping " + depth_file_path + ": not an Hdf5 file")
             continue
-        elif not is_depth_file(file_path):
-            #get_logger().info("Skipping " + file_path + ": not a depth file")
+        elif not is_depth_file(depth_file_path):
             continue
-        with HDF5File(file_path,"r") as hfile:
-            image_features.append(hfile["patches"][:])
+        rgb_file_path = join(dir_name,f[:-18] + "crop.png.hdf5")
+        with HDF5File(depth_file_path,"r") as dfile, HDF5File(rgb_file_path,"r") as rgbfile:
+            image_features.append(np.hstack([rgbfile["patches"], dfile["patches"][:]]))
     features[basename]=image_features
 
+def generate_splitFiles(available_classes, dir_name, files):
+    get_logger().info("Folder " + dir_name + " contains " + str(len(files)) + " files")
+    folder_name = os.path.basename(os.path.normpath(dir_name))
+    if not hasNumbers(folder_name): #we are only interested in instance level folders (they contain numbers)
+        return
+    basename =  nregex.match(folder_name).group(1)
+    for f in files:
+        #get_logger().info("Parsing " + join(dir_name,f))
+        old_file = join(dir_name,f)
+        if os.path.isdir(old_file):
+            continue
+        elif not is_image(old_file):
+            #get_logger().info("Skipping " + old_file + ": not an image")
+            continue
+        if basename in available_classes:
+            class_n = available_classes.index(basename)
+            print(old_file + " " + str(class_n))
 
-if __name__ == '__main__':
-    init_logging()
-    log = get_logger()
-    args = get_arguments()
+def test_svm(args):
     test_instances = get_testing_folders(args.split_file, args.split)
     os.path.walk(args.input_folder, walk, test_instances)
 
@@ -112,8 +131,20 @@ if __name__ == '__main__':
     te_labels = np.concatenate(tel)
     clf = svm.LinearSVC(dual=False)
     start=time.clock()
-    log.info("Fitting SVM")
+    log.info("Fitting SVM - "+ str(tr_patches.shape) + " training patch size " " and " + str(tr_labels.shape) + " labels")
     clf.fit(tr_patches, tr_labels)
-    log.info("Predicting labels")
+    log.info("Took " + str(time.clock()-start) + "\nPredicting labels")
     acc = clf.score(te_patches, te_labels)
     log.info("Accuracy: " + str(acc))
+
+def make_splits_files(input_dir, output_dir):
+    top_level_folders = glob.glob(input_dir+"/*")
+    available_classes = sorted([el.split("/")[-1] for el in top_level_folders])
+    os.path.walk(input_dir, generate_splitFiles, available_classes)
+
+if __name__ == '__main__':
+    init_logging()
+    log = get_logger()
+    args = get_arguments()
+    if(args.mode=="gen"):
+        make_splits_files(args.input_folder, args.output_folder)

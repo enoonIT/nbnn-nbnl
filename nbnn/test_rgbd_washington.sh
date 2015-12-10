@@ -4,7 +4,7 @@
 # This code tests a linear svm on the whole images, using a CNN based feature
 #
 
-DATA_DIR="/home/fmcarlucci/data/desc/rgbd-dataset_eval_depth/" 
+DATA_DIR="/home/fmcarlucci/data/desc/rgbd-dataset_eval/" 
 SPLIT_FILE="/home/fmcarlucci/data/desc/rgbd-dataset_eval/testinstance_ids.txt"
 
 

@@ -1,22 +1,17 @@
 #!/usr/bin/python
 
-########################################
-# Patch/descriptor extraction utility. #
-#                                      #
-# Author: ilja.kuzborskij@idiap.ch     #
-########################################
-
 from argparse import ArgumentParser
 from os import makedirs
 from os.path import join
 from common import init_logging, get_logger
-import os
+import os, glob, re
 
 from h5py import File as HDF5File
 
 import NewCaffeExtractor
 from collections import namedtuple
 
+nregex = re.compile("(\w+)\_\d")
 
 def get_arguments():
     log = get_logger()
@@ -50,13 +45,13 @@ def get_arguments():
         log.error('input-dir option is required, but not present.')
         exit()
 
-    if not args.output_dir:
-        log.error('output-dir option is required, but not present.')
-        exit()
+    #if not args.output_dir:
+        #log.error('output-dir option is required, but not present.')
+        #exit()
 
-    if not args.image_dim:
-        log.error('image-dim option is required, but not present.')
-        exit()
+    #if not args.image_dim:
+        #log.error('image-dim option is required, but not present.')
+        #exit()
 
     return args
 
@@ -78,7 +73,10 @@ def touch(fname):
         open(fname, 'a').close()
 
 def is_image(filename):
-    return filename.lower().endswith(('_depthcrop.png'))
+    return filename.lower().endswith(('_crop.png'))
+
+def hasNumbers(inputString):
+    return any(char.isdigit() for char in inputString)
 
 def walk(params, dir_name, files):
     input_dir = params.input_dir
@@ -111,6 +109,25 @@ def walk(params, dir_name, files):
             get_logger().error("Traceback: couldn't extract features from image " + old_file + ", skipping")
             continue
 
+def generate_splitFiles(available_classes, dir_name, files):
+    get_logger().info("Folder " + dir_name + " contains " + str(len(files)) + " files")
+    folder_name = os.path.basename(os.path.normpath(dir_name))
+    if not hasNumbers(folder_name): #we are only interested in instance level folders (they contain numbers)
+        return
+    basename =  nregex.match(folder_name).group(1)
+    for f in files:
+        #get_logger().info("Parsing " + join(dir_name,f))
+        print("Parsing " + join(dir_name,f))
+        old_file = join(dir_name,f)
+        if os.path.isdir(old_file):
+            continue
+        elif not is_image(old_file):
+            get_logger().info("Skipping " + old_file + ": not an image")
+            continue
+        if basename in available_classes:
+            class_n = available_classes.index(basename)
+            print(old_file + " " + str(class_n))
+
 
 
 
@@ -123,6 +140,11 @@ def extract(input_dir, output_dir, network_data_dir, num_patches, patch_size, im
     params = namedtuple("Params","input_dir output_dir extractor")
     os.path.walk(input_dir, walk, params(input_dir, output_dir, ex))
 
+def make_splits_files(input_dir, output_dir):
+    top_level_folders = glob.glob(input_dir+"/*")
+    available_classes = sorted([el.split("/")[-1] for el in top_level_folders])
+    os.path.walk(input_dir, generate_splitFiles, available_classes)
+
 
 if __name__ == '__main__':
     init_logging()
@@ -131,6 +153,7 @@ if __name__ == '__main__':
     args = get_arguments()
     log.info('Extracting all files...')
     output_dirname = args.output_dir
-    extract(args.input_dir, args.output_dir, args.network_data_dir, args.patches, args.patch_size, args.image_dim, args.levels,args.layer_name)
+    #extract(args.input_dir, args.output_dir, args.network_data_dir, args.patches, args.patch_size, args.image_dim, args.levels,args.layer_name)
+    make_splits_files(args.input_dir, args.output_dir)
 
 
