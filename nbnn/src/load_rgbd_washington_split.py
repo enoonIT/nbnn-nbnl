@@ -7,9 +7,16 @@ import time, glob
 import numpy as np
 nregex = re.compile("(\w+)\_\d")
 
+
+class file_output(object):
+    train_file = None
+    test_file = None
+
+
 class fakeLogger():
     def info(self, stuff):
         print stuff
+
 
 def init_logging():
     common.init_logging()
@@ -33,6 +40,7 @@ def get_arguments():
 def hasNumbers(inputString):
     return any(char.isdigit() for char in inputString)
 
+
 def get_testing_folders(split_file, split):
     """Returns a list containing the object instances we want to keep for testing
 
@@ -45,7 +53,7 @@ def get_testing_folders(split_file, split):
     instances = []
     with open(split_file) as sfile:
         data = sfile.read()
-        trial = re.split("\*+\strial\s\d+\s\*+\n",data)[split]
+        trial = re.split("\*+\strial\s\d+\s\*+", data)[split+1]
         instances = filter(None, trial.splitlines())
         log.info("Loaded split test instances list")
         log.info(instances)
@@ -63,6 +71,7 @@ def is_image(filename):
 
 train_features = {}
 test_features = {}
+test_instances = None
 
 def walk(test_instances, dir_name, files):
     folder_name = os.path.basename(os.path.normpath(dir_name))
@@ -91,15 +100,19 @@ def walk(test_instances, dir_name, files):
             image_features.append(np.hstack([rgbfile["patches"], dfile["patches"][:]]))
     features[basename]=image_features
 
+
 def generate_splitFiles(available_classes, dir_name, files):
     get_logger().info("Folder " + dir_name + " contains " + str(len(files)) + " files")
     folder_name = os.path.basename(os.path.normpath(dir_name))
-    if not hasNumbers(folder_name): #we are only interested in instance level folders (they contain numbers)
+    out_file = file_output.train
+    if folder_name in test_instances:
+        out_file = file_output.test
+    if not hasNumbers(folder_name):  # we are only interested in instance level folders (they contain numbers)
         return
-    basename =  nregex.match(folder_name).group(1)
+    basename = nregex.match(folder_name).group(1)
     for f in files:
         #get_logger().info("Parsing " + join(dir_name,f))
-        old_file = join(dir_name,f)
+        old_file = join(dir_name, f)
         if os.path.isdir(old_file):
             continue
         elif not is_image(old_file):
@@ -107,10 +120,10 @@ def generate_splitFiles(available_classes, dir_name, files):
             continue
         if basename in available_classes:
             class_n = available_classes.index(basename)
-            print(old_file + " " + str(class_n))
+            out_file.write(old_file + " " + str(class_n) + "\n")
+
 
 def test_svm(args):
-    test_instances = get_testing_folders(args.split_file, args.split)
     os.path.walk(args.input_folder, walk, test_instances)
 
     log.info("Transforming train data into numpy format")
@@ -137,14 +150,20 @@ def test_svm(args):
     acc = clf.score(te_patches, te_labels)
     log.info("Accuracy: " + str(acc))
 
+
 def make_splits_files(input_dir, output_dir):
-    top_level_folders = glob.glob(input_dir+"/*")
+    top_level_folders = glob.glob(input_dir + "/*")
     available_classes = sorted([el.split("/")[-1] for el in top_level_folders])
+    file_output.train = open(output_dir + "/train.txt", "w")
+    file_output.test = open(output_dir + "/test.txt", "w")
     os.path.walk(input_dir, generate_splitFiles, available_classes)
+    file_output.train.close()
+    file_output.test.close()
 
 if __name__ == '__main__':
     init_logging()
     log = get_logger()
     args = get_arguments()
-    if(args.mode=="gen"):
+    test_instances = get_testing_folders(args.split_file, args.split)
+    if(args.mode == "gen"):
         make_splits_files(args.input_folder, args.output_folder)
