@@ -27,13 +27,18 @@ def get_logger():
     logger = common.get_logger()
     return logger
 
+
 def get_arguments():
-    parser = ArgumentParser(description='Utility to load training\testing splits for the Washington RGB-D Object Dataset.')
+    parser = ArgumentParser(description='Utility to load training\testing splits '
+    'for the Washington RGB-D Object Dataset.')
     parser.add_argument("mode", help="What should this script do. 'gen' or 'svm'")
-    parser.add_argument("input_folder",help="The folder containing the extracted features")
-    parser.add_argument("--output_folder",help="The folder where to position the split files")
-    parser.add_argument("split_file",help="The file from which to load the splits")
-    parser.add_argument("split",help="Which training split to load",type=int)
+    parser.add_argument("input_folder", help="The folder containing the extracted features")
+    parser.add_argument("--output_folder", help="The folder where to position the split files")
+    parser.add_argument("split_file", help="The file from which to load the splits")
+    parser.add_argument("split", help="Which training split to load", type=int)
+    parser.add_argument("--rnd_split", help="Make random splits, need n_train and n_test")
+    parser.add_argument("--n_train", help="Number of training images", type=int)
+    parser.add_argument("--n_test", help="Number of testing images", type=int)
     args = parser.parse_args()
     return args
 
@@ -143,22 +148,29 @@ def test_svm(args):
     tr_labels = np.concatenate(trl)
     te_labels = np.concatenate(tel)
     clf = svm.LinearSVC(dual=False)
-    start=time.clock()
-    log.info("Fitting SVM - "+ str(tr_patches.shape) + " training patch size " " and " + str(tr_labels.shape) + " labels")
+    start = time.clock()
+    log.info("Fitting SVM - " + str(tr_patches.shape) + " training patch size " " and " + str(tr_labels.shape) +
+            " labels")
     clf.fit(tr_patches, tr_labels)
-    log.info("Took " + str(time.clock()-start) + "\nPredicting labels")
+    log.info("Took " + str(time.clock() - start) + "\nPredicting labels")
     acc = clf.score(te_patches, te_labels)
     log.info("Accuracy: " + str(acc))
 
 
 def make_splits_files(input_dir, output_dir):
-    top_level_folders = glob.glob(input_dir + "/*")
-    available_classes = sorted([el.split("/")[-1] for el in top_level_folders])
+    available_classes = sorted(filter(lambda x: os.path.isdir(os.path.join(input_dir, x)), os.listdir(input_dir)))
+    if output_dir == None:
+        output_dir = input_dir
     file_output.train = open(output_dir + "/train.txt", "w")
     file_output.test = open(output_dir + "/test.txt", "w")
     os.path.walk(input_dir, generate_splitFiles, available_classes)
     file_output.train.close()
     file_output.test.close()
+
+
+def make_random_splits(input_dir, output_dir):
+    print "TODO"
+
 
 if __name__ == '__main__':
     init_logging()
@@ -166,4 +178,7 @@ if __name__ == '__main__':
     args = get_arguments()
     test_instances = get_testing_folders(args.split_file, args.split)
     if(args.mode == "gen"):
-        make_splits_files(args.input_folder, args.output_folder)
+        if args.rnd_split:
+            make_random_splits(args.input_folder, args.output_folder)
+        else:
+            make_splits_files(args.input_folder, args.output_folder)
