@@ -36,11 +36,13 @@ def get_arguments():
     parser.add_argument("--output_folder", help="The folder where to position the split files")
     parser.add_argument("split_file", help="The file from which to load the splits")
     parser.add_argument("split", help="Which training split to load", type=int)
+    parser.add_argument("--prefix", help="Optional prefix for train\test.txt files")
     parser.add_argument("--rnd_split", help="Make random splits, need n_train and n_test")
     parser.add_argument("--n_train", help="Number of training images", type=int)
     parser.add_argument("--n_test", help="Number of testing images", type=int)
     args = parser.parse_args()
     return args
+
 
 def hasNumbers(inputString):
     return any(char.isdigit() for char in inputString)
@@ -58,41 +60,45 @@ def get_testing_folders(split_file, split):
     instances = []
     with open(split_file) as sfile:
         data = sfile.read()
-        trial = re.split("\*+\strial\s\d+\s\*+", data)[split+1]
+        trial = re.split("\*+\strial\s\d+\s\*+", data)[split + 1]
         instances = filter(None, trial.splitlines())
         log.info("Loaded split test instances list")
         log.info(instances)
-        log.info("There are " + str(len(instances)) +" test instances")
+        log.info("There are " + str(len(instances)) + " test instances")
     return instances
+
 
 def is_hdf5(filename):
     return filename.lower().endswith('.hdf5')
 
+
 def is_depth_file(filename):
-    return filename.lower().endswith('_depthcrop.png.hdf5')
+    return filename.lower().endswith('_crop.png.hdf5')
+
 
 def is_image(filename):
-    return filename.lower().endswith(('_crop.png'))
+    return filename.lower().endswith(('_depthcrop.png'))
 
 train_features = {}
 test_features = {}
 test_instances = None
 
+
 def walk(test_instances, dir_name, files):
     folder_name = os.path.basename(os.path.normpath(dir_name))
-    if not hasNumbers(folder_name): #we are only interested in instance level folders (they contain numbers)
+    if not hasNumbers(folder_name):  # we are only interested in instance level folders (they contain numbers)
         return
-    basename =  nregex.match(folder_name).group(1)
+    basename = nregex.match(folder_name).group(1)
 
     features = train_features
     if folder_name in test_instances:
-        features = test_features;
+        features = test_features
 
     get_logger().info(folder_name + " " + basename)
     image_features = features.get(basename, [])
     #import pdb; pdb.set_trace()
     for f in files:
-        depth_file_path = join(dir_name,f)
+        depth_file_path = join(dir_name, f)
         if os.path.isdir(depth_file_path):
             continue
         elif not is_hdf5(depth_file_path):
@@ -157,12 +163,14 @@ def test_svm(args):
     log.info("Accuracy: " + str(acc))
 
 
-def make_splits_files(input_dir, output_dir):
+def make_splits_files(input_dir, output_dir, split, prefix):
     available_classes = sorted(filter(lambda x: os.path.isdir(os.path.join(input_dir, x)), os.listdir(input_dir)))
-    if output_dir == None:
+    if output_dir is None:
         output_dir = input_dir
-    file_output.train = open(output_dir + "/train.txt", "w")
-    file_output.test = open(output_dir + "/test.txt", "w")
+    if prefix is None:
+        prefix = ""
+    file_output.train = open(output_dir + "/" + prefix + "train_" + str(split) + ".txt", "w")
+    file_output.test = open(output_dir + "/" + prefix + "test_" + str(split) + ".txt", "w")
     os.path.walk(input_dir, generate_splitFiles, available_classes)
     file_output.train.close()
     file_output.test.close()
@@ -181,4 +189,4 @@ if __name__ == '__main__':
         if args.rnd_split:
             make_random_splits(args.input_folder, args.output_folder)
         else:
-            make_splits_files(args.input_folder, args.output_folder)
+            make_splits_files(args.input_folder, args.output_folder, args.split, args.prefix)

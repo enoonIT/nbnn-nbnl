@@ -11,6 +11,8 @@ def get_arguments():
     parser.add_argument("files_to_scale", help="The file containing the names of the images we want to scale")
     parser.add_argument("output_folder", help="Where to scale the scaled images")
     parser.add_argument("square_side", help="Size of square side", type=int)
+    parser.add_argument("--depth2rgb", help="If this flag is enabled, images will be converted to RGB with a "
+                        "jet colorization", action='store_true')
     args = parser.parse_args()
     return args
 
@@ -45,21 +47,31 @@ def scale_image_keep_ratio(image, square_side):
         new_image.paste(right, (left_w + new_w, 0))
     return new_image
 
+
 def convert_depth_image_to_jetrgb(image_path):
     dimage = cv2.imread(image_path, -1)  # load in raw mode
-    min_value = img.min()
-    max_value = img.max()
+    min_value = dimage.min()
+    max_value = dimage.max()
+    im_range = (dimage.astype('float32') - min_value) / (max_value - min_value)
+    im_range = 255.0 * im_range
+    out_img = cv2.applyColorMap(im_range.astype("uint8"), cv2.COLORMAP_JET)
+    return Image.fromarray(out_img)
 
-def scale_images(input_folder, output_folder, filenames, new_side_size):
+
+def scale_images(input_folder, output_folder, filenames, new_side_size, depth2rgb):
     total_images = len(filenames)
     print "There are " + str(total_images) + " to scale"
     for item, file_line in enumerate(filenames):
         rel_path = file_line.split()[0]
         input_path = path.join(input_folder, rel_path)
         output_path = path.join(output_folder, rel_path)
-        if( path.exists(output_path)):
+        if(path.exists(output_path)):
             continue
-        new_image = scale_image_keep_ratio(Image.open(input_path, "r"), new_side_size)
+        if depth2rgb:
+            image = convert_depth_image_to_jetrgb(input_path)
+        else:
+            image = Image.open(input_path, "r")
+        new_image = scale_image_keep_ratio(image, new_side_size)
         folder_structure = path.dirname(output_path)
         if not path.exists(folder_structure):
             makedirs(folder_structure)
@@ -71,4 +83,4 @@ def scale_images(input_folder, output_folder, filenames, new_side_size):
 if __name__ == '__main__':
     args = get_arguments()
     with open(args.files_to_scale) as eval_file:
-        scale_images(args.input_folder, args.output_folder, eval_file.readlines(), args.square_side)
+        scale_images(args.input_folder, args.output_folder, eval_file.readlines(), args.square_side, args.depth2rgb)
