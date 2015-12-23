@@ -163,10 +163,11 @@ def extract_decaf(input_dir, output_dir, network_data_dir, files, num_patches, p
     log = get_logger()
     BATCH_SIZE = 16
     #ex = DecafExtractor.DecafExtractor(layer_name)
-    ex = CaffeExtractorPlus.CaffeExtractorPlus(
-                       network_data_dir + 'hybridCNN_iter_700000_upgraded.caffemodel',
-                       network_data_dir + 'hybridCNN_deploy_no_relu_upgraded.prototxt',
-                       network_data_dir + 'hybrid_mean.npy')
+    #ex = CaffeExtractorPlus.CaffeExtractorPlus(
+                       #network_data_dir + 'hybridCNN_iter_700000_upgraded.caffemodel',
+                       #network_data_dir + 'hybridCNN_deploy_no_relu_upgraded.prototxt',
+                       #network_data_dir + 'hybrid_mean.npy')
+    ex = NewCaffeExtractor()
     ex.set_parameters(patch_size, num_patches, levels, image_dim, BATCH_SIZE)
     if oversample:
         log.info('Extracting with mirror combinations (X,Y,X-Y,Y-X')

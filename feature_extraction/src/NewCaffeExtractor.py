@@ -150,16 +150,16 @@ class NewCaffeExtractor:
         im = Image.open(filename)
 
         # Resizing image
-        if max(im.size) != self.image_dim:
-            if im.size[0] > im.size[1]: #TODO add padding instead of warping
-                new_height = (self.image_dim * im.size[1]) / im.size[0]
-                new_dim = (self.image_dim, new_height)
-            else:
-                new_width = (self.image_dim * im.size[0]) / im.size[1]
-                new_dim = (new_width, self.image_dim)
+        #if max(im.size) != self.image_dim:
+            #if im.size[0] > im.size[1]: #TODO add padding instead of warping
+                #new_height = (self.image_dim * im.size[1]) / im.size[0]
+                #new_dim = (self.image_dim, new_height)
+            #else:
+                #new_width = (self.image_dim * im.size[0]) / im.size[1]
+                #new_dim = (new_width, self.image_dim)
 
-            log.info('Resizing image from (%d, %d) to (%d, %d).', im.size[0], im.size[1], new_dim[0], new_dim[1])
-            im = im.resize(new_dim, Image.ANTIALIAS)
+            #log.info('Resizing image from (%d, %d) to (%d, %d).', im.size[0], im.size[1], new_dim[0], new_dim[1])
+            #im = im.resize(new_dim, Image.ANTIALIAS)
 
         # Estimating number of extracted features taking into account transformations
         estimated_feature_num = self.patches_per_image * self.get_number_of_features_per_image()
@@ -197,7 +197,9 @@ class NewCaffeExtractor:
             k+=1
         expected = 0
         skipped = 0
-
+        largestSide = max(im.size)
+        smallestPatch = int(round(largestSide * float(32)/200))
+        self.patch_sizes = [smallestPatch, smallestPatch*2, smallestPatch*4]
         for l in range(self.levels):
             countLevel = 0
             _w = w -self.patch_sizes[l]
