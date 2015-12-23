@@ -220,7 +220,7 @@ class NewCaffeExtractor:
                     patch_bottom = y+self.patch_sizes[l]
 
                     if (check_patch_coords(x, y, patch_left, patch_bottom) and
-                        patch_left <= w and patch_bottom <= h ):
+                        patch_left <= w and patch_bottom <= h and k<self.patches_per_image):
                         patch = im.crop( (x, y, patch_left, patch_bottom) )
                         patch.load()
                         countLevel +=1
