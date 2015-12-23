@@ -32,5 +32,5 @@ python ./src/extract.py --input-dir $f --output-dir $OUTPUT_DIR \
        --levels $LEVEL --split $DATA_SPLIT \
        --num-train-images $NUM_TRAIN --num-test-images $NUM_TEST \
        --layer-name $DECAF_LAYER_NAME --network-data-dir $network_data_dir \
-       --patch-method $PATCH_EXTRACTION_METHOD --oversample
+       --patch-method $PATCH_EXTRACTION_METHOD
 done

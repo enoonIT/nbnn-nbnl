@@ -168,6 +168,7 @@ def extract_decaf(input_dir, output_dir, network_data_dir, files, num_patches, p
                        #network_data_dir + 'hybridCNN_deploy_no_relu_upgraded.prototxt',
                        #network_data_dir + 'hybrid_mean.npy')
     ex = NewCaffeExtractor.NewCaffeExtractor()
+    #import pdb; pdb.set_trace()
     ex.set_parameters(patch_size, num_patches, levels, image_dim, BATCH_SIZE)
     if oversample:
         log.info('Extracting with mirror combinations (X,Y,X-Y,Y-X')
