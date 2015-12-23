@@ -21,7 +21,7 @@ from h5py import File as HDF5File
 from h5py import special_dtype
 
 from common import get_desc_name
-import CaffeExtractorPlus
+import CaffeExtractorPlus, NewCaffeExtractor
 
 def get_arguments():
     log = get_logger()
@@ -167,7 +167,7 @@ def extract_decaf(input_dir, output_dir, network_data_dir, files, num_patches, p
                        #network_data_dir + 'hybridCNN_iter_700000_upgraded.caffemodel',
                        #network_data_dir + 'hybridCNN_deploy_no_relu_upgraded.prototxt',
                        #network_data_dir + 'hybrid_mean.npy')
-    ex = NewCaffeExtractor()
+    ex = NewCaffeExtractor.NewCaffeExtractor()
     ex.set_parameters(patch_size, num_patches, levels, image_dim, BATCH_SIZE)
     if oversample:
         log.info('Extracting with mirror combinations (X,Y,X-Y,Y-X')
