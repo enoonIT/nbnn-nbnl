@@ -70,7 +70,7 @@ class NewCaffeExtractor:
     def __init__(self):
         caffe.set_mode_gpu()
         caffe_root = '/home/fmcarlucci/libs/caffe/'
-        self.net = caffe.Net(caffe_root + 'models/bvlc_reference_caffenet/deploy.prototxt',
+        self.net = caffe.Net(caffe_root + 'models/bvlc_reference_caffenet/deploy_no_relu.prototxt',
                 caffe_root + 'models/bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel',
                 caffe.TEST)
 
