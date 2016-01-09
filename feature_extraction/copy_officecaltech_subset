@@ -9,5 +9,5 @@ echo "Array items:"
 for item in ${categories[*]}
 do
     original=${input}/${item}
-    ls $original
+    cp $original $2
 done
