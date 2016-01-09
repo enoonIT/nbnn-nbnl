@@ -9,8 +9,11 @@ datasets{3}.name = 'dslr';
 datasets{4}.data = load_patches('~/data/desc/office/webcam10/', patch);
 datasets{4}.name = 'webcam';
 elements=1:numel(datasets);
+RELU=true;
 DIMS=128;
-dir_name = strcat('dims_',num2str(DIMS),'_std_relu_level',num2str(LEVEL),'/');
+srelu='norelu';
+if RELU, srelu='relu';end
+dir_name = strcat('dims_',num2str(DIMS),'_std_', srelu,'_level',num2str(LEVEL),'/');
 if not(exist(dir_name,'dir'))
 	mkdir(dir_name);
 end
@@ -19,12 +22,16 @@ for idx=elements
 	fprintf('Start cycle for target %s\n', name)
 	X = cell_to_matrix(datasets{idx}.data);
 	to_apply = elements([1:idx-1 idx+1:end]);
+	if RELU
+		disp 'Applying RELU'
+		X(X<0)=0;
+	end
 	[xmean, xstd, coeff, latent ] = getPCAMatrix(X);
 	variance_kept = sum(latent(1:DIMS))/sum(latent)
 	disp 'Applying PCA to targets'
 	for dest=to_apply
 		disp(datasets{dest}.name)
-		reduced_data = apply_pca(datasets{dest}.data, coeff, DIMS, xmean, xstd );
+		reduced_data = apply_pca(datasets{dest}.data, coeff, DIMS, xmean, xstd, RELU);
 		save(strcat(dir_name, name,'_to_',datasets{dest}.name), 'reduced_data');
 	end
 	save(strcat(dir_name, 'variance_', name), 'variance_kept');
