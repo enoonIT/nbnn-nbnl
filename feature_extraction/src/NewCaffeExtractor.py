@@ -88,6 +88,7 @@ class NewCaffeExtractor:
         self.levels = levels
         self.image_dim = image_dim
         self.extraction_method=self.balanced_extract
+        #self.extraction_method=self.grid_extract
         self.patch_sizes = map(int, self.patch_size * 2**np.arange(0,levels,1.0))
         self.batch_size = batch_size;
         self.net.blobs['data'].reshape(self.batch_size,3,227,227)
@@ -95,11 +96,11 @@ class NewCaffeExtractor:
 
     def add_transform(self, transform):
         self.transforms.append(transform)
-    def enable_data_augmentation(self):
-        self.transforms.append(FlipX())
-        self.transforms.append(FlipY())
-        self.transforms.append(CombinedTransform(FlipX(), FlipY()))
-        self.transforms.append(CombinedTransform(FlipY(), FlipX()))
+    #def enable_data_augmentation(self):
+        #self.transforms.append(FlipX())
+        #self.transforms.append(FlipY())
+        #self.transforms.append(CombinedTransform(FlipX(), FlipY()))
+        #self.transforms.append(CombinedTransform(FlipY(), FlipX()))
 
     def get_number_of_features_per_image(self):
         return len(self.transforms)
@@ -178,6 +179,53 @@ class NewCaffeExtractor:
 
         log.info('Done. Extracted: %d.', feature_storage.cursor)
         return feature_storage
+
+    def grid_extract(self, im, feature_storage, check_patch_coords, transform, filename):
+        (w, h) = im.size
+        log = get_logger()
+        log.info("Grid extraction")
+        # Extracting features from patches
+        preprocessedPatches = np.empty([self.patches_per_image, 3, 227, 227], dtype="float32")
+        positions = np.zeros((self.patches_per_image,2), dtype="uint16")
+        # Calculating patch step
+        k=0
+        expected = 0
+        skipped = 0
+        gridStep = 32
+        for l in range(self.levels):
+            countLevel = 0
+            _w = w -self.patch_sizes[l]
+            _h = h - self.patch_sizes[l]
+            if(_w <0 or _h<0):
+                continue
+            patch_step = gridStep
+
+            w_steps = np.arange(0, _w+1, patch_step)
+            h_steps = np.arange(0, _h+1, patch_step)
+            print "Image size (" + str(w)+", "+str(h)+") - patch size: " + str(self.patch_sizes[l]) + " patch step: " + str(patch_step) + " available pixels: (" + str(_w) +", "+str(_h)+") " \
+                    "\n\twsteps: " + str(w_steps) + " \n\th_steps: " + str(h_steps)
+            for i in range(len(w_steps)):
+                for j in range(len(h_steps)):
+                    expected += 1
+                    x = w_steps[i]
+                    y = h_steps[j]
+                    patch_left = x+self.patch_sizes[l]
+                    patch_bottom = y+self.patch_sizes[l]
+
+                    if (check_patch_coords(x, y, patch_left, patch_bottom) and
+                        patch_left <= w and patch_bottom <= h and k<self.patches_per_image):
+                        patch = im.crop( (x, y, patch_left, patch_bottom) )
+                        patch.load()
+                        countLevel +=1
+                        preprocessedPatches[k,...]=self.transformer.preprocess('data', self.to_rgb(patch))
+                        positions[k,...] = np.matrix([x, y])
+                        k+=1
+                    else:
+                        import pdb; pdb.set_trace()
+                        skipped += 1
+            print "got " + str(countLevel) + " for level " + str(l)
+        self.load_caffe_patches(preprocessedPatches[0:k], positions[0:k] ,feature_storage)
+        print "Expected " + str(expected) + " skipped: " + str(skipped)
 
     def balanced_extract(self, im, feature_storage, check_patch_coords, transform, filename):
         (w, h) = im.size

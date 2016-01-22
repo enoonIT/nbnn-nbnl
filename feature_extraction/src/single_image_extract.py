@@ -15,6 +15,7 @@ import os
 from h5py import File as HDF5File
 
 import CaffeExtractorPlus
+import NewCaffeExtractor
 from collections import namedtuple
 
 
@@ -118,10 +119,11 @@ def extract(input_dir, output_dir, network_data_dir, num_patches, patch_size, im
     log = get_logger()
     BATCH_SIZE = 16
     log.info("Walking " + input_dir)
-    ex = CaffeExtractorPlus.CaffeExtractorPlus(
-                       network_data_dir + 'hybridCNN_iter_700000_upgraded.caffemodel',
-                       network_data_dir + 'hybridCNN_deploy_no_relu_upgraded.prototxt',
-                       network_data_dir + 'hybrid_mean.npy')
+    #ex = CaffeExtractorPlus.CaffeExtractorPlus(
+                       #network_data_dir + 'hybridCNN_iter_700000_upgraded.caffemodel',
+                       #network_data_dir + 'hybridCNN_deploy_no_relu_upgraded.prototxt',
+                       #network_data_dir + 'hybrid_mean.npy')
+    ex = NewCaffeExtractor.NewCaffeExtractor()
     ex.set_parameters(patch_size, num_patches, levels, image_dim, BATCH_SIZE)
     params = namedtuple("Params","input_dir output_dir extractor")
     os.path.walk(input_dir, walk, params(input_dir, output_dir, ex))

@@ -1,17 +1,17 @@
 clear
-LEVEL=6;
+LEVEL=7;
 patch=strcat('/patches',num2str(LEVEL));
-datasets{1}.data = load_patches('~/data/desc/caltech10/all_32_3_extra_hybrid_mean/', patch);
+datasets{1}.data = load_patches('~/data/desc/whole_image/caltech10/', patch);
 datasets{1}.name = 'caltech';
-datasets{2}.data = load_patches('~/data/desc/office/amazon10/', patch);
+datasets{2}.data = load_patches('~/data/desc//whole_image/office/amazon10/', patch);
 datasets{2}.name = 'amazon';
-datasets{3}.data = load_patches('~/data/desc/office/dslr10/', patch);
+datasets{3}.data = load_patches('~/data/desc/whole_image/office/dslr10/', patch);
 datasets{3}.name = 'dslr';
-datasets{4}.data = load_patches('~/data/desc/office/webcam10/', patch);
+datasets{4}.data = load_patches('~/data/desc/whole_image/office/webcam10/', patch);
 datasets{4}.name = 'webcam';
 elements=1:numel(datasets);
-RELU=true;
-STANDARDIZE=false;
+RELU=false;
+STANDARDIZE=true;
 DIMS=128;
 srelu='norelu';
 if RELU, srelu='relu';end

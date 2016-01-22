@@ -1,17 +1,16 @@
 function [X] = buildVLADALL(image_dir, img_list, D, V, PCAV)
 
 D = single(D);
-
 % start the building
 X = zeros(length(img_list), size(D,1)*size(V,2), 'single');
 for i=1:length(img_list)
-    i
     % load each data separately
     name = img_list{i};
-    name=strrep(name,'.jpg','.mat');
-    name=strrep(name,'.JPEG','.mat');
-    name = [image_dir, name];
+%     name=strrep(name,'.jpg','.mat');
+%     name=strrep(name,'.JPEG','.mat');
+    name = [image_dir, name, '.mat'];
     name = strtrim(name);
+    %fprintf('Loading image %s, %d/%d\n',name, i, length(img_list));
 
     try
         data = load(name);

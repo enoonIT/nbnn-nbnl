@@ -14,7 +14,7 @@ k = 5;
 [a,idx] = sort(D,2);
 a = a(:,1:k);
 idx = idx(:,1:k);
-sim = exp(-a/10);
+sim = exp(-a/1000);
 sim = normalizeL1(sim);
 v = zeros(cc, dim);
 for i = 1:size(X,1)
@@ -25,6 +25,7 @@ end
 
 if norm (v) == 0
   v = ones(1,cc*dim);
+  disp('Norm 0!')
 end
 
 

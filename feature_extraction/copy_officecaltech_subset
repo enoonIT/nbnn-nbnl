@@ -1,6 +1,7 @@
 #!/bin/bash
 
-categories=('backpack.hdf5' 'headphones.hdf5' 'monitor.hdf5' 'bike.hdf5' 'keyboard.hdf5' 'mouse.hdf5' 'projector.hdf5' 'calculator.hdf5'  'laptop.hdf5' 'mug.hdf5')
+categories=('backpack' 'headphones' 'monitor' 'bike' 'keyboard' 'mouse' 'projector' 'calculator'  'laptop' 'mug')
+#categories=('backpack.hdf5' 'headphones.hdf5' 'monitor.hdf5' 'bike.hdf5' 'keyboard.hdf5' 'mouse.hdf5' 'projector.hdf5' 'calculator.hdf5'  'laptop.hdf5' 'mug.hdf5')
 input=$1
 output=$2
 echo "Array size: ${#categories[*]}"
@@ -9,5 +10,6 @@ echo "Array items:"
 for item in ${categories[*]}
 do
     original=${input}/${item}
-    cp $original $2
+    echo $original
+    cp $original $2 -r
 done
