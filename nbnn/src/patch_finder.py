@@ -25,11 +25,22 @@ def get_arguments():
 
 
 def save_crop(patch_loc, image_path, num, out_folder):
-    img = Image.open(image_path)
-    pos = patch_loc[0]
-    size = patch_loc[1]
+    scale = 2
+    image_dim = 200 * scale
+    im = Image.open(image_path)
+    if max(im.size) != image_dim:
+        if im.size[0] > im.size[1]:
+            new_height = (image_dim * im.size[1]) / im.size[0]
+            new_dim = (image_dim, new_height)
+        else:
+            new_width = (image_dim * im.size[0]) / im.size[1]
+            new_dim = (new_width, image_dim)
+        print 'Resizing image from (%d, %d) to (%d, %d).' % (im.size[0], im.size[1], new_dim[0], new_dim[1])
+        im = im.resize(new_dim, Image.ANTIALIAS)
+    pos = patch_loc[0] * scale
+    size = patch_loc[1] * scale
     endPos = pos + size
-    img.crop((pos[0], pos[1], endPos[0], endPos[1])).save(out_folder + "patch_" + str(num) + ".jpg")
+    im.crop((pos[0], pos[1], endPos[0], endPos[1])).save(out_folder + "patch_" + str(num) + ".jpg")
 
 
 def get_nearest_patches(hfile_path, modelFile, scaler, n_patches, out_folder):
