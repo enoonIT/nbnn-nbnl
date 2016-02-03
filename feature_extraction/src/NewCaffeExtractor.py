@@ -149,7 +149,9 @@ class NewCaffeExtractor:
         log = get_logger()
 
         im = Image.open(filename)
-
+        (w, h) = im.size
+        if w < 16 or h < 16:
+            return None
         # Resizing image
         #if max(im.size) != self.image_dim:
             #if im.size[0] > im.size[1]: #TODO add padding instead of warping
@@ -221,7 +223,7 @@ class NewCaffeExtractor:
                         positions[k,...] = np.matrix([x, y])
                         k+=1
                     else:
-                        import pdb; pdb.set_trace()
+                        #import pdb; pdb.set_trace()
                         skipped += 1
             print "got " + str(countLevel) + " for level " + str(l)
         self.load_caffe_patches(preprocessedPatches[0:k], positions[0:k] ,feature_storage)

@@ -14,8 +14,8 @@ function [xmean, xstd, COEFF, LATENT ] = getPCAMatrix( X , doSTD )
 	xstd = ones(1,m);
     end
     xstd(xstd==0)=epsilon; %to avoid numerical problems
-    B = (X - repmat(xmean,[n 1])) ./ repmat(xstd,[n 1]);
+    X = (X - repmat(xmean,[n 1])) ./ repmat(xstd,[n 1]);
     disp 'Will now compute PCA'
-    [COEFF, SCORE, LATENT] = princomp(B);
+    [COEFF, SCORE, LATENT] = princomp(X);
     toc
 end

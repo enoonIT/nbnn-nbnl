@@ -163,11 +163,11 @@ def extract_decaf(input_dir, output_dir, network_data_dir, files, num_patches, p
     log = get_logger()
     BATCH_SIZE = 16
     #ex = DecafExtractor.DecafExtractor(layer_name)
-    ex = CaffeExtractorPlus.CaffeExtractorPlus(
-                       network_data_dir + 'hybridCNN_iter_700000_upgraded.caffemodel',
-                       network_data_dir + 'hybridCNN_deploy_no_relu_upgraded.prototxt',
-                       network_data_dir + 'hybrid_mean.npy')
-    #ex = NewCaffeExtractor.NewCaffeExtractor()
+    #ex = CaffeExtractorPlus.CaffeExtractorPlus(
+                       #network_data_dir + 'hybridCNN_iter_700000_upgraded.caffemodel',
+                       #network_data_dir + 'hybridCNN_deploy_no_relu_upgraded.prototxt',
+                       #network_data_dir + 'hybrid_mean.npy')
+    ex = NewCaffeExtractor.NewCaffeExtractor()
     #import pdb; pdb.set_trace()
     ex.set_parameters(patch_size, num_patches, levels, image_dim, BATCH_SIZE)
     if oversample:
@@ -185,9 +185,11 @@ def extract_decaf(input_dir, output_dir, network_data_dir, files, num_patches, p
             log.info('Skipping <%s>. Already in the dataset.', basename(f))
             continue
 
-        features = ex.extract_image(f)
-
-        if features.cursor > 0:
+        try:
+            features = ex.extract_image(f)
+        except:
+            features = None
+        if features is not None and features.cursor > 0:
             (patches6, patches7, positions) = features.get()
 
             ds.append(f, patches6, patches7, positions)
