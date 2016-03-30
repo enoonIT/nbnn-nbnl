@@ -3,4 +3,5 @@
 *.*#
 *.asv
 *.out
+*.mat
 CMakeFiles/
