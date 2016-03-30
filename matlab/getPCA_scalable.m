@@ -1,5 +1,6 @@
 function [xmean, xstd, COEFF, LATENT ] = getPCA_scalable( X , doSTD )
-%GETABACUSFORMAT Summary of this function goes here
+%getPCA_scalable computes the PCA coefficients
+%   This version of the function tries to use as less memory as possible
 %   X should be samples x n_dims
     tic
     epsilon = 0.00001;

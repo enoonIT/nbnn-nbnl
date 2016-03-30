@@ -10,7 +10,7 @@ from argparse import ArgumentParser
 from os import makedirs
 from os.path import join
 from common import init_logging, get_logger
-import os
+import os, sys
 
 from h5py import File as HDF5File
 
@@ -79,7 +79,7 @@ def touch(fname):
         open(fname, 'a').close()
 
 def is_image(filename):
-    return filename.lower().endswith(('.png', '.jpg', '.jpeg'))
+    return filename.lower().endswith(('.png', '.jpg', '.jpeg','.gif'))
 
 def walk(params, dir_name, files):
     input_dir = params.input_dir
@@ -110,6 +110,7 @@ def walk(params, dir_name, files):
             create_hdf5_dataset(new_file, patches7, positions)
         except:
             get_logger().error("Traceback: couldn't extract features from image " + old_file + ", skipping")
+            print sys.exc_info()[0]
             continue
 
 

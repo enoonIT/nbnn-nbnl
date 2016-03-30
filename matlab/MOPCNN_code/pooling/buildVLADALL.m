@@ -10,7 +10,9 @@ for i=1:length(img_list)
 %     name=strrep(name,'.JPEG','.mat');
     name = [image_dir, name, '.mat'];
     name = strtrim(name);
-    %fprintf('Loading image %s, %d/%d\n',name, i, length(img_list));
+    if mod(i,500)==0
+        fprintf('Loading image %s, %d/%d\n',name, i, length(img_list));
+    end
 
     try
         data = load(name);

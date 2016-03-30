@@ -38,8 +38,6 @@ for idx=elements
         
 		fprintf('Applying to %s\n', short_name)
         S256 = load(strcat('data/',short_name,'_256.mat'));
-        S128 = load(strcat('data/',short_name,'_128.mat'));
-        S064 = load(strcat('data/',short_name,'_64.mat'));
         data = S256.X;
         %128px wide patches
         X128 = buildVLADALL(strcat('/home/fmcarlucci/data/desc/office_caltech/p128/', source_dataset_name), ...
