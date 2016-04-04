@@ -1,6 +1,6 @@
 
-input_folder = '/mnt/SSD/DepthNet/Renderings/8bit/';
-output_folder = '/mnt/SSD/DepthNet/Renderings/8bits_noisy/';
+input_folder = '/home/enoon/data/tests/folding_chair';
+output_folder = '/home/enoon/data/tests/folding_chair_1';
 input_file = '/home/enoon/data/tests/files.txt';
 inpt = importdata(input_file);
 tic
