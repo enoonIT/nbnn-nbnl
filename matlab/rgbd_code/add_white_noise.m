@@ -5,7 +5,11 @@ function [ output_args ] = add_white_noise( filelist, input_dir, output_dir )
     imagesize = 256;
     ih = imagesize / 2;
     hole_size = 17;
-    for i=1:numel(filelist)
+    n_imgs = numel(filelist);
+    for i=1:n_imgs
+        if mod(i, 1000) == 0
+            fprintf('At %d/%d, elapsed %d secs\n',i,n_imgs, toc);
+        end
         dark_light_bias = 20 - rand*40;
         img = double(imread(fullfile(input_dir, filelist{i})));
         noise = randn(imagesize/uint8(randsample([1 2 3], 1, true, [0.3 0.5 0.2])));

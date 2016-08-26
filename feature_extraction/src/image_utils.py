@@ -61,6 +61,8 @@ def convert_depth_image_to_jetrgb(image_path):
 def scale_images(input_folder, output_folder, filenames, new_side_size, depth2rgb):
     total_images = len(filenames)
     print "There are " + str(total_images) + " to scale"
+    if depth2rgb:
+	print "Will apply colorjet"
     for item, file_line in enumerate(filenames):
         rel_path = file_line.split()[0]
         input_path = path.join(input_folder, rel_path)

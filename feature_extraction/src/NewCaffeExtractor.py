@@ -145,7 +145,7 @@ class NewCaffeExtractor:
     def to_rgb(self, _im):
         im = np.array(_im)
         if(im.ndim == 3):
-            ret = im / 255.0
+            ret = im.astype('float32') / 255.0
         else:
             w, h = im.shape
             ret = np.empty((w, h, 3), dtype=np.float32)
