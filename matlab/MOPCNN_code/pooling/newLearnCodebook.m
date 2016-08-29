@@ -8,7 +8,9 @@ img_list = img_list(rr);
 X = [];
 for i=1:num_files
     name = img_list{i};
-    fprintf('Loading image %s, %d/%d\n',name, i, num_files);
+    if mod(i,500)==0
+        fprintf('Loading image %s, %d/%d\n',name, i, num_files);
+    end
     try
         data = h5read(name, '/feats');  
 	level = h5read(name, '/level');
